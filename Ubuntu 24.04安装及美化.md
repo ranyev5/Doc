@@ -41,6 +41,18 @@ if visudo -c >/dev/null 2>&1; then
 	[ -f /etc/sudoers.d/sudo-timeout ] && rm -f /etc/sudoers.d/sudo-timeout exit 1 
 fi
 ```
+
+## 更新software updater配置
+```
+# 步骤1：设置禁用更新检查
+sudo sed -i 's/APT::Periodic::Update-Package-Lists ".*";/APT::Periodic::Update-Package-Lists "0";/' /etc/apt/apt.conf.d/10periodic
+
+# 步骤2：禁用自动下载更新包（1=启用，0=禁用）
+sudo sed -i 's/APT::Periodic::Download-Upgradeable-Packages ".*";/APT::Periodic::Download-Upgradeable-Packages "0";/' /etc/apt/apt.conf.d/10periodic
+
+# 步骤2：禁用清理更新缓存
+sudo sed -i 's/APT::Periodic::AutocleanInterval ".*";/APT::Periodic::AutocleanInterval "7";/' /etc/apt/apt.conf.d/10periodic
+```
 ## 安装代理工具
 ``` shell
 cd ~/Downloads
