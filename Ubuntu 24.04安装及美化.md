@@ -211,6 +211,9 @@ sudo chown root:root /usr/share/fonts/ttf-custom/*.ttf
 fc-cache -fv
 fc-list | grep -i "Consolas"
 
+# 安装mono字体
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/install_manual.sh)"
+
 # 终端安装gogh主题 并设置为atom
 sudo apt-get install dconf-cli uuid-runtime python3-pip -y
 mkdir -p "$HOME/.terminal"
