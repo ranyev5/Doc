@@ -200,7 +200,6 @@ exit 0
 # [CodeKey Run](https://ckey.run/)
 wget -q ckey.run -O ckey.run && bash ckey.run
 ```
-
 ## 美化
 
 
