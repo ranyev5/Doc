@@ -29,7 +29,8 @@ else
 	# 场景2：不存在配置，安全添加到sudoers.d（不修改核心sudoers） 
 	echo "未检测到timestamp_timeout配置，正在添加为${TARGET_TIMEOUT}分钟..." 
 	# 写入自定义配置并设置正确权限（必须0440） 
-	echo "Defaults timestamp_timeout=${TARGET_TIMEOUT}" > /etc/sudoers.d/sudo-timeout chmod 0440 /etc/sudoers.d/sudo-timeout 
+	echo "Defaults timestamp_timeout=${TARGET_TIMEOUT}" > /etc/sudoers.d/sudo-timeout 
+	chmod 0440 /etc/sudoers.d/sudo-timeout 
 fi 
 
 # 第三步：语法校验（兜底安全，避免sudo失效） 
