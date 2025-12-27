@@ -1,7 +1,6 @@
 ## 基础工具安装
 ```
 sudo apt update && sudo apt install vim -y
-
 ```
 ## 安装代理工具
 ```
@@ -12,5 +11,6 @@ sudo dpkg -i ./clash-party-linux-1.8.9-amd64.deb
 
 ## 安装终端工具
 ``` 
+sudo apt update && sudo apt install zsh 
 
 ```
