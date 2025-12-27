@@ -88,125 +88,120 @@ sed -i.bak \
 ## 安装常用软件
 ```
 #!/bin/bash
-# 功能：Ubuntu24.04桌面版一键部署：卸载Firefox+安装Chrome(默认)+VS Code+JetBrains Toolbox+PyCharm/Goland/CLion
-# 要求：以普通用户执行（含sudo权限，脚本内会请求密码）
-# 注意：执行前确保网络通畅，全程约10-20分钟（取决于网络速度）
-# 定义颜色输出（可选，方便查看执行状态）
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # 恢复默认颜色
 
-# 函数：输出信息提示
+# 功能：Ubuntu24.04桌面版一键部署：卸载Firefox+安装Chrome(默认)+VS Code+JetBrains Toolbox（无额外自动配置/IDE安装）
+# 核心：1. 保留指定Chrome安装方法 2. 固定Toolbox下载链接 3. 删除IDE自动安装+Toolbox自动配置逻辑
+# 要求：以普通用户执行（含sudo权限，脚本内会请求密码）
+
+# 定义颜色输出（简洁实用，无特殊字符）
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+# 简化信息输出函数
 info() {
     echo -e "${GREEN}[INFO] $1${NC}"
 }
-warn() {
-    echo -e "${YELLOW}[WARN] $1${NC}"
-}
-error() {
-    echo -e "${RED}[ERROR] $1${NC}"
-    exit 1
-}
+
 # 第一步：校验系统版本（确保是Ubuntu24.04）
 info "正在校验系统版本..."
 if [ ! -f /etc/os-release ] || ! grep -q "24.04" /etc/os-release; then
-    error "此脚本仅支持Ubuntu24.04系统，当前系统不匹配！"
+    echo "错误：此脚本仅支持Ubuntu24.04系统！"
+    exit 1
 fi
 
 # 第二步：卸载原生Firefox浏览器
 info "开始卸载原生Firefox浏览器..."
-# Ubuntu24.04原生Firefox为snap包，同时兼容deb包卸载
 sudo snap remove --purge firefox 2>/dev/null
 sudo apt remove --purge firefox -y 2>/dev/null
 sudo apt autoremove -y >/dev/null 2>&1
 info "Firefox卸载完成（若未安装，忽略相关报错）"
 
-# 第三步：安装Google Chrome并设为默认浏览器
+# 第三步：安装Google Chrome（保留你的核心方法，无修改）
 info "开始安装Google Chrome浏览器..."
-# 1. 安装依赖包
+# 1. 安装必备依赖（确保wget、gpg等工具可用）
 sudo apt update >/dev/null 2>&1
 sudo apt install -y wget apt-transport-https ca-certificates gnupg -y >/dev/null 2>&1
-# 2. 添加Chrome官方软件源密钥
-wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo gnupg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg >/dev/null 2>&1
-# 3. 添加Chrome软件源
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list >/dev/null
-# 4. 安装Chrome稳定版
+
+# 2. 你的核心方法：下载Chrome签名密钥并转换为GPG格式
+info "导入Chrome官方签名密钥..."
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome-keyring.gpg > /dev/null
+
+# 3. 补充Chrome软件源配置（绑定已导入的密钥，确保apt能检索到包）
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
+
+# 4. 你的核心安装命令（优化静默执行，屏蔽冗余输出）
 sudo apt update >/dev/null 2>&1
-sudo apt install -y google-chrome-stable >/dev/null 2>&1 
-# 5. 设置Chrome为默认浏览器
-info "将Chrome设置为系统默认浏览器..."
-xdg-settings set default-web-browser google-chrome.desktop >/dev/null 2>&1
-info "Google Chrome安装并设为默认浏览器完成"
+sudo apt install -y google-chrome-stable >/dev/null 2>&1
+
+# 5. 优化：自动创建软链接（解决zsh/bash command not found问题）+ 设置默认浏览器
+if [ -f /opt/google/chrome/google-chrome ]; then
+    sudo ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome >/dev/null 2>&1
+    xdg-settings set default-web-browser google-chrome.desktop >/dev/null 2>&1
+    info "Google Chrome安装完成并设为默认浏览器"
+else
+    echo "警告：Chrome安装失败，可手动下载deb包安装"
+fi
 
 # 第四步：安装Visual Studio Code (VS Code)
 info "开始安装Visual Studio Code..."
-# 1. 添加VS Code官方密钥
+# 1. 添加VS Code官方密钥和源
 wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /usr/share/keyrings/vscode-keyring.gpg >/dev/null 2>&1
-# 2. 添加VS Code软件源
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/vscode-keyring.gpg] https://packages.microsoft.com/repos/vscode stable main" | sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null
 
-# 3. 安装VS Code
+# 2. 安装VS Code
 sudo apt update >/dev/null 2>&1
 sudo apt install -y code >/dev/null 2>&1
 info "Visual Studio Code安装完成"
 
-# 第五步：安装JetBrains Toolbox
-info "开始安装JetBrains Toolbox..."
-# 1. 定义安装目录和下载地址（适配最新版，自动获取64位包）
-JB_TOOLBOX_DIR="$HOME/.local/share/JetBrains/Toolbox"
-JB_TOOLBOX_TAR="jetbrains-toolbox.tar.gz"
-JB_DOWNLOAD_URL=$(wget -qO- https://data.services.jetbrains.com/products/releases?code=TB&latest=true&type=release | grep -o '"linux":".*?.tar.gz"' | cut -d'"' -f4)
+# 第五步：安装JetBrains Toolbox（固定链接，删除自动配置逻辑）
+info "开始安装JetBrains Toolbox（使用指定固定链接）..."
 
-# 2. 下载JetBrains Toolbox
+# 1. 定义安装目录和固定下载链接（删除配置文件相关定义）
+JB_TOOLBOX_DIR="$HOME/.local/share/JetBrains/Toolbox"
+JB_TOOLBOX_TAR="jetbrains-toolbox-3.2.0.65851.tar.gz"
+JB_DOWNLOAD_URL="https://download-cdn.jetbrains.com/toolbox/jetbrains-toolbox-3.2.0.65851.tar.gz"
+
+# 2. 下载固定版本Toolbox压缩包（静默下载，屏蔽冗余输出）
+info "下载JetBrains Toolbox 3.2.0.65851..."
 wget -q -O $JB_TOOLBOX_TAR $JB_DOWNLOAD_URL >/dev/null 2>&1
-if [ ! -f $JB_TOOLBOX_TAR ]; then
-    error "JetBrains Toolbox下载失败，请检查网络连接！"
-fi
-# 3. 创建安装目录并解压
-mkdir -p $JB_TOOLBOX_DIR
-tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1 >/dev/null 2>&1
-# 4. 启动Toolbox（首次启动生成配置，后台运行）
-info "首次启动JetBrains Toolbox，生成配置文件..."
-$JB_TOOLBOX_DIR/jetbrains-toolbox >/dev/null 2>&1 &
-sleep 10 # 等待Toolbox初始化完成
-# 5. 清理下载包
-rm -f $JB_TOOLBOX_TAR
-info "JetBrains Toolbox安装完成"
-# 第六步：通过JetBrains Toolbox安装PyCharm/Goland/CLion
-info "开始通过JetBrains Toolbox安装PyCharm、Goland、CLion..."
-# 1. 定义Toolbox命令行工具路径（初始化后生成）
-JB_TOOLBOX_CLI="$HOME/.local/share/JetBrains/Toolbox/bin/jetbrains-toolbox"
-# 2. 等待CLI工具生成（防止未初始化完成）
-for i in {1..10}; do
-    if [ -f $JB_TOOLBOX_CLI ]; then
-        break
-    fi
-    sleep 3
-done
-if [ ! -f $JB_TOOLBOX_CLI ]; then
-    warn "JetBrains Toolbox CLI工具未找到，将跳过自动安装IDE（可手动打开Toolbox安装）"
+
+# 3. 解压并安装（容错处理，确保目录存在，删除自动配置相关步骤）
+if [ -f $JB_TOOLBOX_TAR ]; then
+    mkdir -p $JB_TOOLBOX_DIR
+    tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1 >/dev/null 2>&1
+    # 首次启动Toolbox（后台运行，生成基础配置，无额外自定义配置）
+    info "首次启动JetBrains Toolbox，生成基础配置文件..."
+    $JB_TOOLBOX_DIR/jetbrains-toolbox >/dev/null 2>&1 &
+    sleep 10 # 恢复默认等待时间，仅确保基础初始化完成
+    # 清理下载的压缩包，释放空间
+    rm -f $JB_TOOLBOX_TAR
+    info "JetBrains Toolbox 3.2.0.65851安装完成"
 else
-    # 3. 安装各IDE（--silent 静默安装，无图形界面交互）
-    $JB_TOOLBOX_CLI install pycharm-professional --silent >/dev/null 2>&1 &
-    $JB_TOOLBOX_CLI install goland --silent >/dev/null 2>&1 &
-    $JB_TOOLBOX_CLI install clion --silent >/dev/null 2>&1 &
-    # 4. 等待安装启动（后台安装，进度可在Toolbox图形界面查看）
-    sleep 15
-    info "PyCharm、Goland、CLion已启动后台安装，可打开JetBrains Toolbox查看安装进度"
+    echo "警告：JetBrains Toolbox压缩包下载失败，请检查网络或链接有效性"
 fi
-# 第七步：清理系统缓存，完成部署
+
+# 第六步：清理系统缓存，释放磁盘空间（删除原IDE自动安装步骤）
 info "清理系统安装缓存..."
 sudo apt autoremove -y >/dev/null 2>&1
 sudo apt clean >/dev/null 2>&1
-# 最终提示
+  
+
+# 最终提示（更新对应说明，删除IDE相关内容）
 info "=============================================="
 info "所有任务执行完成！"
-info "1. Firefox已卸载"
-info "2. Chrome已安装并设为默认浏览器（可直接启动）"
-info "3. VS Code已安装（终端输入code启动）"
-info "4. JetBrains Toolbox已安装（应用菜单中可找到）"
-info "5. PyCharm/Goland/CLion已启动后台安装（查看Toolbox进度）"
+info "1. Chrome可通过终端命令google-chrome启动"
+info "2. VS Code可通过终端命令code启动"
+info "3. JetBrains Toolbox可在应用菜单中找到（版本3.2.0.65851，需手动配置/安装IDE）"
 info "=============================================="
 exit 0
 ```
+```
+# Jetbrain ide 激活参考
+# [CodeKey Run](https://ckey.run/)
+wget -q ckey.run -O ckey.run && bash ckey.run
+```
+
+## 美化
+
+
+
