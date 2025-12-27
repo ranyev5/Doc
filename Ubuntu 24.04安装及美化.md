@@ -210,6 +210,16 @@ sudo chmod 644 /usr/share/fonts/ttf-custom/*.ttf
 sudo chown root:root /usr/share/fonts/ttf-custom/*.ttf
 fc-cache -fv
 fc-list | grep -i "Consolas"
+
+# 终端安装gogh主题 并设置为atom
+sudo apt-get install dconf-cli uuid-runtime python3-pip -y
+mkdir -p "$HOME/.terminal"
+cd "$HOME/.terminal"
+git clone https://github.com/Gogh-Co/Gogh.git gogh
+cd gogh
+export TERMINAL=terminator
+cd installs
+./atom.sh
 ```
 
 
