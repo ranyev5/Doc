@@ -201,6 +201,12 @@ exit 0
 wget -q ckey.run -O ckey.run && bash ckey.run
 ```
 ## 美化
+```
+# 安装consolas字体
+sudo mkdir -p /usr/share/fonts/ttf-custom
+sudo wget https://github.com/ranyev5/Doc/blob/main/Consolas.ttf -o /usr/share/fonts/ttf-custom/consolas.ttf
+sudo chmod 644 /usr/share/fonts/ttf-custom/*.ttf
 
+```
 
 
