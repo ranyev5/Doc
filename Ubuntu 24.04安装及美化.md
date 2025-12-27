@@ -204,6 +204,10 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ```
 # 执行该命令，其他相关库会自动安装 
 sudo apt install gnome-shell gnome-shell-extension-manager gnome-tweaks -y
+# 安装ocs-url
+wget -q -O /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb "https://ocs-dl.fra1.cdn.digitaloceanspaces.com/data/files/1467909105/ocs-url_3.1.0-0ubuntu1_amd64.deb?response-content-disposition=attachment%3B%2520ocs-url_3.1.0-0ubuntu1_amd64.deb&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=RWJAQUNCHT7V2NCLZ2AL%2F20251227%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251227T174241Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Signature=976ab1f1db395dd0631acd296cededd528b66135c5ee0b28d105b594dc7c15ac" && \
+sudo apt install -y /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb && \
+rm -f /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb
 ```
 ```
 #!/bin/bash
