@@ -1,3 +1,8 @@
+## 基础工具安装
+```
+sudo apt update && sudo apt install vim -y
+
+```
 ## 安装代理工具
 ```
 cd ~/Downloads
