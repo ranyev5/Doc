@@ -202,6 +202,9 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ```
 ## 美化
 ```
+
+```
+```
 # 安装consolas字体
 sudo apt update && sudo apt install -y fontconfig
 sudo mkdir -p /usr/share/fonts/ttf-custom
@@ -223,6 +226,40 @@ cd gogh
 export TERMINAL=terminator
 cd installs
 ./atom.sh
+
+# 配置terminator
+# 确保配置目录存在（首次使用 Terminator 可能无此目录） 
+mkdir -p ~/.config/terminator
+# 写入 Terminator 配置（包含所有要求：字体、配色、透明度）
+cat > ~/.config/terminator/config << EOF
+[global_config]
+  title_transmit_bg_color = "#d30102"
+[keybindings]
+[profiles]
+  [[default]]
+    # 配置字体：Noto Mono Bold（粗体），字体大小 12（可修改为 14/16）
+    font = Noto Mono Bold 14
+    # 配置配色方案：Solarized dark（Terminator 原生支持）
+    color_scheme = Solarized dark
+    # 配置背景半透明度 80%：启用透明 + 不透明度 0.8（对应半透明 80%）
+    background_transparent = True
+    background_darkness = 0.8
+    # 补充 Solarized dark 配套颜色（确保低版本 Terminator 兼容）
+    foreground_color = "#839496"
+    background_color = "#002b36"
+    cursor_color = "#839496"
+    # 关闭闪烁光标（可选，优化体验）
+    cursor_blink = False
+[layouts]
+  [[default]]
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+    [[[window0]]]
+      type = Window
+      parent = ""
+[plugins]
+EOF
 ```
 
 
