@@ -17,10 +17,6 @@ sh -c "$(curl -fsSL https://install.ohmyz.sh/)"
 # 安装插件
 git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
-git clone https://github.com/wting/autojump.git ~/.oh-my-zsh/plugins/autojump
-# 安装autojump
-cd ~/.oh-my-zsh/plugins/autojump
-/install.py
 # 修改配置文件
 sed -i.bak \
   -e 's/^ZSH_THEME=.*/ZSH_THEME="agnoster"/' \
