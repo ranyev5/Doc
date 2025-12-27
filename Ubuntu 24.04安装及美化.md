@@ -203,10 +203,13 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ## 美化
 ```
 # 安装consolas字体
+sudo apt update && sudo apt install -y fontconfig
 sudo mkdir -p /usr/share/fonts/ttf-custom
-sudo wget https://github.com/ranyev5/Doc/blob/main/Consolas.ttf -o /usr/share/fonts/ttf-custom/consolas.ttf
+sudo wget -O /usr/share/fonts/ttf-custom/consolas.ttf https://raw.githubusercontent.com/ranyev5/Doc/main/Consolas.ttf
 sudo chmod 644 /usr/share/fonts/ttf-custom/*.ttf
-
+sudo chown root:root /usr/share/fonts/ttf-custom/*.ttf
+fc-cache -fv
+fc-list | grep -i "Consolas"
 ```
 
 
