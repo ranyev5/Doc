@@ -203,7 +203,7 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ## 美化
 ```
 # 执行该命令，其他相关库会自动安装 
-sudo apt install gnome-shell gnome-shell-extension-manager
+sudo apt install gnome-shell gnome-shell-extension-manager gnome-tweaks -y
 
 
 ```
