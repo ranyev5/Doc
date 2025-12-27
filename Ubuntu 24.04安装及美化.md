@@ -13,7 +13,7 @@ sudo dpkg -i ./clash-party-linux-1.8.9-amd64.deb
 cd ~/Downloads
 sudo apt update && sudo apt install terminator autojump zsh -y 
 chsh -s $(which zsh)
-wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O - | sh 
+sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)"
 git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
 ```
