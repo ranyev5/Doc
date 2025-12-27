@@ -50,8 +50,13 @@ sudo sed -i 's/APT::Periodic::Update-Package-Lists ".*";/APT::Periodic::Update-P
 # 步骤2：禁用自动下载更新包（1=启用，0=禁用）
 sudo sed -i 's/APT::Periodic::Download-Upgradeable-Packages ".*";/APT::Periodic::Download-Upgradeable-Packages "0";/' /etc/apt/apt.conf.d/10periodic
 
-# 步骤2：禁用清理更新缓存
+# 步骤3：启用自动清理更新缓存，每7天一次
 sudo sed -i 's/APT::Periodic::AutocleanInterval ".*";/APT::Periodic::AutocleanInterval "7";/' /etc/apt/apt.conf.d/10periodic
+
+# 步骤四: 禁用自动安装更新
+sudo sed -i 's/APT::Periodic::Unattended-Upgrade ".*";/APT::Periodic::Unattended-Upgrade "0";/' /etc/apt/apt.conf.d/10periodic
+
+
 ```
 ## 安装代理工具
 ``` shell
