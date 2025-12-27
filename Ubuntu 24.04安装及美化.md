@@ -202,6 +202,8 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ```
 ## 美化
 ```
+sudo apt install gnome-tweaks
+
 
 ```
 ```
