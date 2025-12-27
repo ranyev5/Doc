@@ -204,8 +204,38 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 ```
 # 执行该命令，其他相关库会自动安装 
 sudo apt install gnome-shell gnome-shell-extension-manager gnome-tweaks -y
+```
+```
+#!/bin/bash
+# 功能：批量安装 GNOME Shell 扩展（自动适配 GNOME 46 版本）
+# 要求：已安装 wget、unzip、gnome-shell-extension-prefs
+# 配置项：修改扩展 ID 列表和 GNOME 版本
+EXTENSIONS_LIST=("6","19" "307" "779","1460")  # User Themes、Dash to Dock、Clipboard Indicator
+GNOME_VERSION="46"
+TEMP_DIR="/tmp/gnome-extensions"
 
-
+# 颜色输出函数
+GREEN='\033[0;32m'
+NC='\033[0m'
+info() { echo -e "${GREEN}[INFO] $1${NC}"; }
+# 前置准备
+mkdir -p ${TEMP_DIR}
+sudo apt install -y wget unzip chrome-gnome-shell
+# 批量下载并安装扩展
+for EXT_ID in "${EXTENSIONS_LIST[@]}"; do
+    info "开始安装扩展 ID：${EXT_ID}"
+    # 下载扩展包
+    wget -O ${TEMP_DIR}/${EXT_ID}.zip "https://extensions.gnome.org/download-extension/${EXT_ID}.shell-extension.zip?version_tag=$(wget -qO- https://extensions.gnome.org/extension/${EXT_ID}/ | grep -oP 'data-version-tag="\K[^"]+')&shell_version=${GNOME_VERSION}"
+    # 部署扩展
+    mkdir -p ~/.local/share/gnome-shell/extensions/${EXT_ID}@extensions.gnome.org
+    unzip -oq ${TEMP_DIR}/${EXT_ID}.zip -d ~/.local/share/gnome-shell/extensions/${EXT_ID}@extensions.gnome.org
+    # 启用扩展
+    gnome-extensions enable ${EXT_ID}@extensions.gnome.org
+    info "扩展 ID：${EXT_ID} 安装并启用完成"
+done
+# 清理临时文件
+rm -rf ${TEMP_DIR}
+info "所有扩展安装完成，重启 GNOME Shell 即可生效（Alt+F2 输入 r 回车）"
 ```
 ```
 # 安装consolas字体
