@@ -365,10 +365,11 @@ install_proxy_tool() {
     source $HOME/.bashrc
     source $HOME/.clash/clashctl/scripts/cmd/clashctl.sh
     
+    
     # 更新订阅并开启代理
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
     exec_cmd "clashon" "开启系统代理"
-    
+    exec_cmd "clashtun on" "开启隧道模式"
     cd - || return
     # exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
     log_to_file "$LOG_LEVEL_INFO" "代理工具安装完成，已开启系统代理"
