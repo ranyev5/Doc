@@ -91,20 +91,18 @@ configure_sudo_timeout() {
     
     # 使用here-doc方式创建配置脚本，避免转义字符问题
     sudo bash << EOF | tee -a "$LOG_FILE"
-TARGET_TIMEOUT=$timeout
-
 # 检查是否存在有效配置
-if grep -q "^Defaults\s\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>&1; then
+if grep -q "^Defaults\s\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then
     # 存在配置，直接替换
-    sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' /etc/sudoers
+    sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout=$timeout/' /etc/sudoers
     
     # 同时修改sudoers.d目录下的匹配文件
-    grep -rl "^Defaults\s\+timestamp_timeout=" /etc/sudoers.d/* 2>&1 | while read FILE; do
-        sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' \$FILE
+    grep -rl "^Defaults\s\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do
+        sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout=$timeout/' \$FILE
     done
 else
     # 不存在配置，安全添加到sudoers.d
-    echo "Defaults timestamp_timeout=$TARGET_TIMEOUT" > /etc/sudoers.d/sudo-timeout
+    echo "Defaults timestamp_timeout=$timeout" > /etc/sudoers.d/sudo-timeout
     chmod 0440 /etc/sudoers.d/sudo-timeout
 fi
 
