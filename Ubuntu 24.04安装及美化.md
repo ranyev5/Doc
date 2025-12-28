@@ -212,9 +212,8 @@ rm -f /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb
 ```
 #!/bin/bash
 # 功能：批量安装 GNOME Shell 扩展（自动适配 GNOME 46 版本）
-# 要求：已安装 wget、unzip、gnome-shell-extension-prefs
 # 配置项：修改扩展 ID 列表和 GNOME 版本
-EXTENSIONS_LIST=("6","19" "307" "779","1460")  # User Themes、Dash to Dock、Clipboard Indicator
+EXTENSIONS_LIST=("6","19" "307" "779","1460") 
 GNOME_VERSION="46"
 TEMP_DIR="/tmp/gnome-extensions"
 
