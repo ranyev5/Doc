@@ -366,8 +366,8 @@ install_proxy_tool() {
     
     
     # 更新订阅并开启代理
+    exec_cmd "clashctl off" "关闭系统代理"
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
-    exec_cmd "clashon" "开启系统代理"
     exec_cmd "clashtun on" "开启隧道模式"
     cd - || return
     # exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
@@ -435,7 +435,7 @@ main() {
     
     exec_cmd "sudo apt install -y terminator autojump zsh" "安装terminator、autojump、zsh"
     exec_cmd "chsh -s $(which zsh)" "设置zsh为默认shell"
-    exec_cmd "sh -c \"$(curl -fsSL https://install.ohmyz.sh/)\"" "安装Oh My Zsh"
+    exec_cmd "sh -c \"$(sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\")\"" "安装Oh My Zsh"
     
     # 安装zsh插件
     exec_cmd "git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.oh-my-zsh/plugins/zsh-autosuggestions" "安装zsh-autosuggestions插件"
