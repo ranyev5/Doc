@@ -73,7 +73,7 @@ exec_cmd() {
     fi
     
     # 执行命令并同时记录输出到日志文件
-    if eval "$cmd" >> "$LOG_FILE" 2>&1; then
+    if eval "$cmd" >> "$LOG_FILE"; then
         log_to_file "$LOG_LEVEL_INFO" "$desc 成功"
         return 0
     else
