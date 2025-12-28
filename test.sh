@@ -2,7 +2,7 @@
 
 # Ubuntu 24.04 完整安装与美化脚本
 # 功能：一键完成系统基础配置、软件安装和界面美化
-# 版本：1.0
+# 版本：1.1
 # 更新日期：2024年
 
 # 定义颜色输出
@@ -45,6 +45,42 @@ exec_cmd() {
         error "$desc 失败"
         return 1
     fi
+}
+
+# 配置sudo密码缓存时间
+configure_sudo_timeout() {
+    local timeout="$1"
+    info "配置sudo密码缓存为$timeout分钟..."
+    
+    # 使用here-doc方式创建配置脚本，避免转义字符问题
+    sudo bash << EOF
+TARGET_TIMEOUT=$timeout
+
+# 检查是否存在有效配置
+if grep -q "^Defaults\s\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then
+    # 存在配置，直接替换
+    sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' /etc/sudoers
+    
+    # 同时修改sudoers.d目录下的匹配文件
+    grep -rl "^Defaults\s\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do
+        sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' \$FILE
+    done
+else
+    # 不存在配置，安全添加到sudoers.d
+    echo "Defaults timestamp_timeout=$TARGET_TIMEOUT" > /etc/sudoers.d/sudo-timeout
+    chmod 0440 /etc/sudoers.d/sudo-timeout
+fi
+
+# 语法校验
+if visudo -c >/dev/null 2>&1; then
+    echo "sudo密码缓存配置成功！"
+else
+    echo "sudo密码缓存配置失败！"
+    # 清理无效的自定义配置文件
+    [ -f /etc/sudoers.d/sudo-timeout ] && rm -f /etc/sudoers.d/sudo-timeout
+    exit 1
+fi
+EOF
 }
 
 # 刷新 GNOME 扩展配置缓存
@@ -284,9 +320,8 @@ main() {
     
     # 步骤2：配置sudo密码缓存时间
     info ""
-    info "步骤2：配置sudo密码缓存时间"
     local SUDO_TIMEOUT=30  # sudo密码缓存时间（分钟）
-    exec_cmd "sudo bash -c 'TARGET_TIMEOUT=$SUDO_TIMEOUT; if grep -q "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\\$TARGET_TIMEOUT/" /etc/sudoers; grep -rl "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\\$TARGET_TIMEOUT/" \$FILE; done; else echo "Defaults timestamp_timeout=\\$TARGET_TIMEOUT" > /etc/sudoers.d/sudo-timeout; chmod 0440 /etc/sudoers.d/sudo-timeout; fi; visudo -c >/dev/null 2>&1'" "配置sudo密码缓存为$SUDO_TIMEOUT分钟"
+    configure_sudo_timeout $SUDO_TIMEOUT
     
     # 步骤3：更新software updater配置
     info ""
