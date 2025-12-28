@@ -124,13 +124,13 @@ refresh_extension_cache() {
     info "刷新 GNOME 扩展配置缓存..."
     # 步骤1：刷新用户级桌面/扩展索引
     if command -v update-desktop-database &> /dev/null; then
-        update-desktop-database ~/.local/share/applications/ >> "$LOG_FILE" 2>&1
+        update-desktop-database $HOME/.local/share/applications/ >> "$LOG_FILE" 2>&1
         info "桌面扩展索引刷新完成"
         log_to_file "$LOG_LEVEL_INFO" "桌面扩展索引刷新完成"
     fi
 
     # 步骤2：确保扩展目录权限正确
-    chmod -R 755 ~/.local/share/gnome-shell/extensions/ >> "$LOG_FILE" 2>&1
+    chmod -R 755 $HOME/.local/share/gnome-shell/extensions/ >> "$LOG_FILE" 2>&1
     info "扩展目录权限已修复（755）"
     log_to_file "$LOG_LEVEL_INFO" "扩展目录权限已修复（755）"
 
@@ -339,8 +339,8 @@ install_proxy_tool() {
     
     local SUBSCRIBE_URL="$1"
     local REPO_URL="https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git"
-    local INSTALL_DIR="~/.clash/clash-for-linux-install"
-    mkdir -p ~/.clash
+    local INSTALL_DIR="$HOME/.clash/clash-for-linux-install"
+    mkdir -p $HOME/.clash
     # 安装依赖工具
     exec_cmd "sudo apt update && sudo apt install -y git curl wget" "安装代理工具依赖"
     
@@ -350,10 +350,9 @@ install_proxy_tool() {
     fi
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
-    sleep 20
     cd "$INSTALL_DIR"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
-    source ~/.clash/clashctl/scripts/cmd/clashctl.sh
+    source $HOME/.clash/clashctl/scripts/cmd/clashctl.sh
     watch_proxy
     
     # 更新订阅并开启代理
@@ -432,11 +431,11 @@ main() {
     exec_cmd "sh -c \"$(curl -fsSL https://install.ohmyz.sh/)\"" "安装Oh My Zsh"
     
     # 安装zsh插件
-    exec_cmd "git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/plugins/zsh-autosuggestions" "安装zsh-autosuggestions插件"
-    exec_cmd "git clone https://github.com/zsh-users/zsh-syntax-highlighting ~/.oh-my-zsh/plugins/zsh-syntax-highlighting" "安装zsh-syntax-highlighting插件"
+    exec_cmd "git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.oh-my-zsh/plugins/zsh-autosuggestions" "安装zsh-autosuggestions插件"
+    exec_cmd "git clone https://github.com/zsh-users/zsh-syntax-highlighting $HOME/.oh-my-zsh/plugins/zsh-syntax-highlighting" "安装zsh-syntax-highlighting插件"
     
     # 修改zsh配置
-    exec_cmd "sed -i.bak -e 's/^ZSH_THEME=.*/ZSH_THEME=\"agnoster\"/' -e 's/^plugins=.*/plugins=(git zsh-autosuggestions zsh-syntax-highlighting autojump extract sudo)/' ~/.zshrc" "配置zsh主题和插件"
+    exec_cmd "sed -i.bak -e 's/^ZSH_THEME=.*/ZSH_THEME=\"agnoster\"/' -e 's/^plugins=.*/plugins=(git zsh-autosuggestions zsh-syntax-highlighting autojump extract sudo)/' $HOME/.zshrc" "配置zsh主题和插件"
     
     # 步骤6：安装常用软件
     info ""
@@ -506,8 +505,8 @@ main() {
     # 检查Consolas字体文件是否存在
     if [ -f "Consolas.ttf" ]; then
         exec_cmd "sudo cp Consolas.ttf /usr/share/fonts/ttf-custom/" "复制Consolas字体"
-    elif [ -f "~/Documents/Obsidian/Consolas.ttf" ]; then
-        exec_cmd "sudo cp ~/Documents/Obsidian/Consolas.ttf /usr/share/fonts/ttf-custom/" "从Obsidian目录复制Consolas字体"
+    elif [ -f "$HOME/Documents/Obsidian/Consolas.ttf" ]; then
+        exec_cmd "sudo cp $HOME/Documents/Obsidian/Consolas.ttf /usr/share/fonts/ttf-custom/" "从Obsidian目录复制Consolas字体"
     else
         warn "未找到Consolas.ttf字体文件，尝试从网络下载"
         log_to_file "$LOG_LEVEL_WARN" "未找到Consolas.ttf字体文件，尝试从网络下载"
@@ -531,11 +530,11 @@ main() {
     info "配置Terminator..."
     log_to_file "$LOG_LEVEL_INFO" "配置Terminator..."
     
-    exec_cmd "mkdir -p ~/.config/terminator" "创建Terminator配置目录"
+    exec_cmd "mkdir -p $HOME/.config/terminator" "创建Terminator配置目录"
     
     # 写入Terminator配置并记录到日志
     log_to_file "$LOG_LEVEL_INFO" "写入Terminator配置"
-    cat > ~/.config/terminator/config << EOF
+    cat > $HOME/.config/terminator/config << EOF
 [global_config]
   title_transmit_bg_color = "#d30102"
 [keybindings]
