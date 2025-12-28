@@ -211,34 +211,438 @@ rm -f /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb
 ```
 ```
 #!/bin/bash
-# 功能：批量安装 GNOME Shell 扩展（自动适配 GNOME 46 版本）
-# 配置项：修改扩展 ID 列表和 GNOME 版本
-EXTENSIONS_LIST=("6","19" "307" "779","1460") 
-GNOME_VERSION="46"
-TEMP_DIR="/tmp/gnome-extensions"
 
-# 颜色输出函数
+# GNOME 扩展 一键批量下载+安装+启用脚本（集成缓存刷新，解决list查询不到问题）
+
+# 说明：在配置区域添加多个扩展的「下载链接」和「扩展 ID」即可批量处理
+
+  
+
+# ===================== 配置区域（需手动修改，支持添加多个扩展）=====================
+
+EXTENSION_DOWNLOAD_URLS=(
+
+    # 示例1：Apps Menu 扩展
+
+    "https://extensions.gnome.org/extension-data/apps-menugnome-shell-extensions.gcampax.github.com.v61.shell-extension.zip"
+
+    # 示例2：User Themes 扩展
+
+    "https://extensions.gnome.org/extension-data/user-themegnome-shell-extensions.gcampax.github.com.v60.shell-extension.zip"
+
+    #  Dish To Dock
+
+    "https://extensions.gnome.org/extension-data/dash-to-dockmicxgx.gmail.com.v102.shell-extension.zip"
+
+    "https://extensions.gnome.org/extension-data/clipboard-indicatortudmotu.com.v69.shell-extension.zip"
+
+    "https://extensions.gnome.org/extension-data/CoverflowAltTabpalatis.blogspot.com.v77.shell-extension.zip"
+
+)
+
+  
+
+TARGET_EXTENSION_IDS=(
+
+    "apps-menu@gnome-shell-extensions.gcampax.github.com"
+
+    "user-theme@gnome-shell-extensions.gcampax.github.com"
+
+    "dash-to-dock@micxgx.gmail.com"
+
+    "clipboard-indicator@tudmotu.com"
+
+    "CoverflowAltTab@palatis.blogspot.com"
+
+)
+
+# =================================================================
+
+  
+
+# ===================== 脚本核心逻辑（无需修改）=====================
+
+# 定义颜色输出
+
+RED='\033[0;31m'
+
 GREEN='\033[0;32m'
-NC='\033[0m'
-info() { echo -e "${GREEN}[INFO] $1${NC}"; }
-# 前置准备
-mkdir -p ${TEMP_DIR}
-sudo apt install -y wget unzip chrome-gnome-shell
-# 批量下载并安装扩展
-for EXT_ID in "${EXTENSIONS_LIST[@]}"; do
-    info "开始安装扩展 ID：${EXT_ID}"
-    # 下载扩展包
-    wget -O ${TEMP_DIR}/${EXT_ID}.zip "https://extensions.gnome.org/download-extension/${EXT_ID}.shell-extension.zip?version_tag=$(wget -qO- https://extensions.gnome.org/extension/${EXT_ID}/ | grep -oP 'data-version-tag="\K[^"]+')&shell_version=${GNOME_VERSION}"
-    # 部署扩展
-    mkdir -p ~/.local/share/gnome-shell/extensions/${EXT_ID}@extensions.gnome.org
-    unzip -oq ${TEMP_DIR}/${EXT_ID}.zip -d ~/.local/share/gnome-shell/extensions/${EXT_ID}@extensions.gnome.org
+
+YELLOW='\033[1;33m'
+
+NC='\033[0m' # 恢复默认颜色
+
+  
+
+# 函数：打印信息
+
+info_log() {
+
+    echo -e "${GREEN}[INFO]${NC} $1"
+
+}
+
+  
+
+# 函数：打印警告
+
+warn_log() {
+
+    echo -e "${YELLOW}[WARN]${NC} $1"
+
+}
+
+  
+
+# 函数：打印错误并退出（全局致命错误）
+
+error_log() {
+
+    echo -e "${RED}[ERROR]${NC} $1"
+
+    exit 1
+
+}
+
+  
+
+# 函数：打印单个扩展操作错误（不终止批量流程）
+
+ext_error_log() {
+
+    echo -e "${RED}[EXT-ERROR]${NC} $1"
+
+}
+
+  
+
+# 新增函数：刷新 GNOME 扩展配置缓存（核心解决list查询不到问题）
+
+refresh_extension_cache() {
+
+    info_log "正在刷新 GNOME 扩展配置缓存..."
+
+    # 步骤1：刷新用户级桌面/扩展索引（无侵入，优先推荐）
+
+    if command -v update-desktop-database &> /dev/null; then
+
+        update-desktop-database ~/.local/share/applications/ &> /dev/null
+
+        info_log "步骤1：桌面扩展索引刷新完成"
+
+    else
+
+        warn_log "步骤1：未找到 update-desktop-database，跳过该刷新方式"
+
+    fi
+
+  
+
+    # 步骤2：确保扩展目录权限正确（避免权限问题导致无法识别）
+
+    chmod -R 755 ~/.local/share/gnome-shell/extensions/ &> /dev/null
+
+    info_log "步骤2：扩展目录权限已修复（755）"
+
+  
+
+    # 步骤3：重启 GNOME 扩展后台服务（强有效，备用）
+
+    if command -v busctl &> /dev/null; then
+
+        busctl --user restart org.gnome.Shell.Extensions &> /dev/null
+
+        info_log "步骤3：GNOME 扩展后台服务已重启"
+
+    else
+
+        warn_log "步骤3：未找到 busctl，跳过服务重启（部分发行版无需此步骤）"
+
+    fi
+
+  
+
+    info_log "扩展配置缓存刷新完成，可立即查询新安装扩展"
+
+}
+
+  
+
+# 步骤1：检查必备工具是否安装
+
+info_log "===== 步骤1：检查必备全局工具 ====="
+
+if ! command -v gnome-extensions &> /dev/null; then
+
+    error_log "未找到 gnome-extensions 命令，请先安装 GNOME 扩展核心依赖（gnome-shell-extensions）"
+
+fi
+
+  
+
+# 选择下载工具（优先 wget，无则用 curl）
+
+DOWNLOAD_TOOL=""
+
+if command -v wget &> /dev/null; then
+
+    DOWNLOAD_TOOL="wget"
+
+    info_log "检测到 wget，将使用 wget 进行下载"
+
+elif command -v curl &> /dev/null; then
+
+    DOWNLOAD_TOOL="curl"
+
+    info_log "检测到 curl，将使用 curl 进行下载"
+
+else
+
+    error_log "未找到 wget 或 curl，请先安装其中一个下载工具（sudo apt install wget/curl）"
+
+fi
+
+  
+
+# 步骤2：检查 GNOME Shell 版本
+
+info_log "\n===== 步骤2：检查 GNOME Shell 版本 ====="
+
+if ! GNOME_VERSION=$(gnome-shell --version | awk '{print $3}'); then
+
+    error_log "无法获取 GNOME Shell 版本，请确认已安装 GNOME 桌面环境"
+
+fi
+
+info_log "当前 GNOME Shell 版本：$GNOME_VERSION"
+
+warn_log "请确保所有下载的扩展与该版本兼容，否则可能无法正常工作"
+
+  
+
+# 步骤3：验证两个数组长度是否一致
+
+info_log "\n===== 步骤3：验证扩展配置信息 ====="
+
+DOWNLOAD_URLS_LEN=${#EXTENSION_DOWNLOAD_URLS[@]}
+
+EXTENSION_IDS_LEN=${#TARGET_EXTENSION_IDS[@]}
+
+  
+
+if [ "$DOWNLOAD_URLS_LEN" -ne "$EXTENSION_IDS_LEN" ]; then
+
+    error_log "配置错误！下载链接数组长度（$DOWNLOAD_URLS_LEN）与扩展 ID 数组长度（$EXTENSION_IDS_LEN）不一致，请检查配置区域"
+
+fi
+
+info_log "验证通过，共配置 $DOWNLOAD_URLS_LEN 个扩展，将开始批量处理"
+
+  
+
+# 步骤4：批量处理每个扩展（下载→安装→【缓存刷新】→启用→验证）
+
+info_log "\n===== 步骤4：开始批量处理扩展 ====="
+
+EXTENSION_SAVE_DIR="$HOME/Downloads/gnome-extensions-batch"
+
+mkdir -p "$EXTENSION_SAVE_DIR"
+
+  
+
+# 定义成功/失败统计变量
+
+SUCCESS_COUNT=0
+
+FAIL_COUNT=0
+
+  
+
+# 循环遍历数组，处理每个扩展
+
+for (( i=0; i<DOWNLOAD_URLS_LEN; i++ )); do
+
+    # 提取当前扩展的下载链接和 ID
+
+    CURRENT_DOWNLOAD_URL=${EXTENSION_DOWNLOAD_URLS[$i]}
+
+    CURRENT_EXTENSION_ID=${TARGET_EXTENSION_IDS[$i]}
+
+    CURRENT_EXTENSION_ZIP_NAME=$(basename "$CURRENT_DOWNLOAD_URL")
+
+    CURRENT_EXTENSION_ZIP_PATH="$EXTENSION_SAVE_DIR/$CURRENT_EXTENSION_ZIP_NAME"
+
+  
+
+    # 打印当前处理的扩展信息
+
+    info_log "\n====================================="
+
+    info_log "正在处理第 $((i+1))/$DOWNLOAD_URLS_LEN 个扩展：$CURRENT_EXTENSION_ID"
+
+    info_log "====================================="
+
+  
+
+    # 子步骤1：下载当前扩展包
+
+    info_log "子步骤1：下载扩展包"
+
+    if [ "$DOWNLOAD_TOOL" = "wget" ]; then
+
+        wget -q -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
+
+            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
+
+            FAIL_COUNT=$((FAIL_COUNT+1))
+
+            continue
+
+        }
+
+    else
+
+        curl -s -o "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
+
+            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
+
+            FAIL_COUNT=$((FAIL_COUNT+1))
+
+            continue
+
+        }
+
+    fi
+
+  
+
+    # 验证下载文件是否存在
+
+    if [ ! -f "$CURRENT_EXTENSION_ZIP_PATH" ]; then
+
+        ext_error_log "第 $((i+1)) 个扩展下载失败，未找到文件：$CURRENT_EXTENSION_ZIP_PATH"
+
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
+        continue
+
+    fi
+
+    info_log "扩展包已成功下载到：$CURRENT_EXTENSION_ZIP_PATH"
+
+  
+
+    # 子步骤2：安装当前扩展（强制覆盖已安装版本）
+
+    info_log "子步骤2：安装扩展"
+
+    gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" &> /dev/null || {
+
+        ext_error_log "第 $((i+1)) 个扩展安装失败：$CURRENT_EXTENSION_ID"
+
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
+        continue
+
+    }
+
+    info_log "扩展已成功安装（强制覆盖已存在版本）"
+
+  
+
+    # 子步骤3：刷新缓存（关键！解决安装后list查询不到的问题）
+
+    info_log "子步骤3：刷新扩展配置缓存"
+
+    refresh_extension_cache
+
+  
+
+    # 子步骤4：启用当前扩展
+
+    info_log "子步骤4：启用扩展"
+
+    # 先检查扩展是否已安装（此时缓存已刷新，可正常查询）
+
+    if ! gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID"; then
+
+        ext_error_log "第 $((i+1)) 个扩展未找到 ID：$CURRENT_EXTENSION_ID，启用失败（可能是缓存刷新失败或扩展包损坏）"
+
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
+        continue
+
+    fi
+
+  
+
     # 启用扩展
-    gnome-extensions enable ${EXT_ID}@extensions.gnome.org
-    info "扩展 ID：${EXT_ID} 安装并启用完成"
+
+    gnome-extensions enable "$CURRENT_EXTENSION_ID" &> /dev/null || {
+
+        ext_error_log "第 $((i+1)) 个扩展启用失败，可能是版本不兼容：$CURRENT_EXTENSION_ID"
+
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
+        continue
+
+    }
+
+    info_log "扩展已成功启用：$CURRENT_EXTENSION_ID"
+
+  
+
+    # 子步骤5：验证当前扩展结果
+
+    info_log "子步骤5：验证安装结果"
+
+    if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID"; then
+
+        info_log "第 $((i+1)) 个扩展：安装并启用成功"
+
+        SUCCESS_COUNT=$((SUCCESS_COUNT+1))
+
+    else
+
+        warn_log "第 $((i+1)) 个扩展：已安装，但未成功启用，请手动检查"
+
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
+    fi
+
 done
-# 清理临时文件
-rm -rf ${TEMP_DIR}
-info "所有扩展安装完成，重启 GNOME Shell 即可生效（Alt+F2 输入 r 回车）"
+
+  
+
+# 步骤5：批量处理总结
+
+info_log "\n===== 步骤5：批量处理完成总结 ====="
+
+info_log "${GREEN}成功处理：$SUCCESS_COUNT 个扩展${NC}"
+
+if [ "$FAIL_COUNT" -gt 0 ]; then
+
+    warn_log "${RED}失败处理：$FAIL_COUNT 个扩展${NC}，请查看上方错误日志排查问题"
+
+else
+
+    info_log "${GREEN}所有扩展均处理成功！${NC}"
+
+fi
+
+  
+
+# 步骤6：给出生效提示
+
+info_log "\n===== 生效说明 ====="
+
+info_log "1. 若使用 X11 环境：按下 Alt + F2，输入 r，回车即可立即生效所有扩展"
+
+info_log "2. 若使用 Wayland 环境：请注销当前用户，重新登录即可生效所有扩展"
+
+info_log "3. 查看单个扩展详细信息：gnome-extensions info 扩展ID"
+
+info_log "4. 查看所有已启用扩展：gnome-extensions list --enabled"
 ```
 ```
 # 安装consolas字体
