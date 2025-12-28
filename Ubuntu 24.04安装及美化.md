@@ -216,11 +216,6 @@ wget -q ckey.run -O ckey.run && bash ckey.run
 
 # 执行该命令，其他相关库会自动安装 
 sudo apt install gnome-shell gnome-shell-extension-manager gnome-tweaks -y
-
-# 安装ocs-url
-wget -q -O /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb "https://ocs-dl.fra1.cdn.digitaloceanspaces.com/data/files/1467909105/ocs-url_3.1.0-0ubuntu1_amd64.deb?response-content-disposition=attachment%3B%2520ocs-url_3.1.0-0ubuntu1_amd64.deb&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=RWJAQUNCHT7V2NCLZ2AL%2F20251227%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251227T174241Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Signature=976ab1f1db395dd0631acd296cededd528b66135c5ee0b28d105b594dc7c15ac" && \
-sudo apt install -y /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb && \
-rm -f /tmp/ocs-url_3.1.0-0ubuntu1_amd64.deb
 ```
 ``` shell
 #!/bin/bash
@@ -517,3 +512,65 @@ cat > ~/.config/terminator/config << EOF
 EOF
 ```
 
+``` shell
+#!/bin/bash
+  
+# 安装 Orchis 主题和 Tela 图标主题的脚本
+  
+# 检查是否安装了必要的依赖工具
+check_dependencies() {
+    local dependencies=("git" "sassc" "gtk2-engines-murrine" "gnome-themes-extra")
+    local missing=()
+  
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -s "$dep" &> /dev/null; then
+            missing+=("$dep")
+        fi
+    done
+  
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "安装必要的依赖..."
+        sudo apt update
+        sudo apt install -y "${missing[@]}"
+    fi
+}
+  
+# 安装 Orchis 主题
+install_orchis() {
+    echo "开始安装 Orchis 主题..."
+    local temp_dir=$(mktemp -d)
+    git clone https://github.com/vinceliuice/Orchis-theme.git "$temp_dir/orchis"
+    cd "$temp_dir/orchis" || { echo "无法进入 Orchis 目录"; exit 1; }
+    chmod +x install.sh
+    # 安装默认主题变体（可根据需要修改参数）
+    ./install.sh -t all -c all -s all --tweaks macos
+    cd - || exit
+    rm -rf "$temp_dir/orchis"
+    echo "Orchis 主题安装完成"
+}
+  
+# 安装 Tela 图标主题
+install_tela() {
+    echo "开始安装 Tela 图标主题..."
+    local temp_dir=$(mktemp -d)
+    git clone https://github.com/vinceliuice/Tela-icon-theme.git "$temp_dir/tela"
+    cd "$temp_dir/tela" || { echo "无法进入 Tela 目录"; exit 1; }
+    chmod +x install.sh
+    # 安装所有颜色变体
+    ./install.sh -a
+    cd - || exit
+    rm -rf "$temp_dir/tela"
+    echo "Tela 图标主题安装完成"
+}
+  
+# 主流程
+main() {
+    check_dependencies
+    install_orchis
+    install_tela
+    echo "所有主题安装完成！请通过 GNOME Tweaks 等工具应用主题"
+}
+  
+main
+
+```
