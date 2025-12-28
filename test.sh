@@ -353,7 +353,7 @@ install_proxy_tool() {
     # 配置并安装
     cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
-    sleep 5
+    exec_cmd "sleep 10" "等待配置执行完成"
     source ~/.bashrc
     
     # 更新订阅并开启代理
