@@ -353,6 +353,7 @@ install_proxy_tool() {
     cd "$INSTALL_DIR"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
     source $HOME/.bashrc
+    source $HOME/clashctl/scripts/cmd/clashctl.sh
     
     # 更新订阅并开启代理
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
