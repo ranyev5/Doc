@@ -350,11 +350,7 @@ install_proxy_tool() {
     fi
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
-    echo $INSTALL_DIR
-    # 配置并安装
-    exec_cmd "echo $INSTALL_DIR" "DEBUG: 安装目录"
-    
-    cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
+    cd "$INSTALL_DIR"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
     source ~/.clash/clashctl/scripts/cmd/clashctl.sh
     watch_proxy
