@@ -356,6 +356,7 @@ install_proxy_tool() {
     exec_cmd "bash install.sh" "执行代理工具安装"
     
     # 更新订阅并开启代理
+    echo $SUBSCRIBE_URL
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
     exec_cmd "clashon" "开启系统代理"
     
