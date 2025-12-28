@@ -339,7 +339,7 @@ install_proxy_tool() {
     
     local SUBSCRIBE_URL="$1"
     local REPO_URL="https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git"
-    local INSTALL_DIR="clash-for-linux-install"
+    local INSTALL_DIR="~/.clash/clash-for-linux-install"
     
     # 安装依赖工具
     exec_cmd "sudo apt update && sudo apt install -y git curl wget" "安装代理工具依赖"
@@ -353,8 +353,8 @@ install_proxy_tool() {
     # 配置并安装
     cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
-    exec_cmd "sleep 10" "等待配置执行完成"
-    source ~/.bashrc
+    source ~/.clash/clashctl/scripts/cmd/clashctl.sh
+    watch_proxy
     
     # 更新订阅并开启代理
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
