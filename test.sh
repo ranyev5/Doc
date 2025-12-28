@@ -361,10 +361,7 @@ install_proxy_tool() {
     
     cd - || return
     exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
-    
-    info "代理工具安装完成，已开启系统代理"
     log_to_file "$LOG_LEVEL_INFO" "代理工具安装完成，已开启系统代理"
-    info "可以通过 clashui 命令查看 Web 控制台信息"
     log_to_file "$LOG_LEVEL_INFO" "可以通过 clashui 命令查看 Web 控制台信息"
 }
 
