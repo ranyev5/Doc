@@ -2,6 +2,8 @@
 
 # Ubuntu 24.04 完整安装与美化脚本
 # 功能：一键完成系统基础配置、软件安装和界面美化
+# 版本：1.0
+# 更新日期：2024年
 
 # 定义颜色输出
 RED='\033[0;31m'
@@ -25,6 +27,9 @@ error() {
 }
 
 # 函数：执行命令并检查结果
+# 参数1：要执行的命令
+# 参数2：命令描述
+# 参数3：是否静默执行（可选）
 exec_cmd() {
     local cmd="$1"
     local desc="$2"
@@ -68,7 +73,7 @@ refresh_extension_cache() {
 install_gnome_extensions() {
     info "安装 GNOME 扩展..."
     
-    # 配置区域
+    # 配置区域：添加扩展下载链接和对应的扩展ID
     EXTENSION_DOWNLOAD_URLS=(
         "https://extensions.gnome.org/extension-data/apps-menugnome-shell-extensions.gcampax.github.com.v61.shell-extension.zip"
         "https://extensions.gnome.org/extension-data/user-themegnome-shell-extensions.gcampax.github.com.v60.shell-extension.zip"
@@ -108,6 +113,7 @@ install_gnome_extensions() {
         return 1
     fi
     info "当前 GNOME Shell 版本：$GNOME_VERSION"
+    warn "请确保所有下载的扩展与该版本兼容"
     
     # 验证数组长度
     if [ "${#EXTENSION_DOWNLOAD_URLS[@]}" -ne "${#TARGET_EXTENSION_IDS[@]}" ]; then
@@ -213,6 +219,45 @@ install_themes() {
     info "Tela 图标主题安装完成"
 }
 
+# 安装代理工具（使用文档中推荐的方式）
+install_proxy_tool() {
+    info "安装代理工具..."
+    
+    # 检查是否提供了订阅链接参数
+    if [ -z "$1" ]; then
+        warn "未提供代理订阅链接，跳过代理工具安装"
+        return 0
+    fi
+    
+    local SUBSCRIBE_URL="$1"
+    local REPO_URL="https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git"
+    local INSTALL_DIR="clash-for-linux-install"
+    
+    # 安装依赖工具
+    exec_cmd "sudo apt update && sudo apt install -y git curl wget" "安装代理工具依赖"
+    
+    # 下载仓库
+    if [ -d "$INSTALL_DIR" ]; then
+        exec_cmd "rm -rf $INSTALL_DIR" "清理旧的安装目录"
+    fi
+    exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
+    
+    # 配置并安装
+    cd "$INSTALL_DIR" || { error "无法进入安装目录"; return 1; }
+    exec_cmd "sed -i 's|^CLASH_CONFIG_URL=.*|CLASH_CONFIG_URL=$SUBSCRIBE_URL|' .env" "配置订阅链接"
+    exec_cmd "bash install.sh" "执行代理工具安装"
+    
+    # 更新订阅并开启代理
+    exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
+    exec_cmd "clashon" "开启系统代理"
+    
+    cd - || return
+    exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
+    
+    info "代理工具安装完成，已开启系统代理"
+    info "可以通过 clashui 命令查看 Web 控制台信息"
+}
+
 # 主函数
 main() {
     info "========================================"
@@ -225,6 +270,12 @@ main() {
         exit 1
     fi
     
+    # 检查是否以普通用户运行
+    if [ "$USER" = "root" ]; then
+        error "请以普通用户身份运行此脚本，脚本会在需要时自动请求sudo权限"
+        exit 1
+    fi
+    
     # 步骤1：基础工具安装
     info ""
     info "步骤1：安装基础工具"
@@ -234,19 +285,18 @@ main() {
     # 步骤2：配置sudo密码缓存时间
     info ""
     info "步骤2：配置sudo密码缓存时间"
-    exec_cmd "sudo bash -c 'TARGET_TIMEOUT=30; if grep -q "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\$TARGET_TIMEOUT/" /etc/sudoers; grep -rl "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\$TARGET_TIMEOUT/" \$FILE; done; else echo "Defaults timestamp_timeout=\$TARGET_TIMEOUT" > /etc/sudoers.d/sudo-timeout; chmod 0440 /etc/sudoers.d/sudo-timeout; fi; visudo -c >/dev/null 2>&1'" "配置sudo密码缓存为30分钟"
+    local SUDO_TIMEOUT=30  # sudo密码缓存时间（分钟）
+    exec_cmd "sudo bash -c 'TARGET_TIMEOUT=$SUDO_TIMEOUT; if grep -q "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\\$TARGET_TIMEOUT/" /etc/sudoers; grep -rl "^Defaults\\s\\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do sed -i "s/^Defaults\\s\\+timestamp_timeout=.*/Defaults timestamp_timeout=\\$TARGET_TIMEOUT/" \$FILE; done; else echo "Defaults timestamp_timeout=\\$TARGET_TIMEOUT" > /etc/sudoers.d/sudo-timeout; chmod 0440 /etc/sudoers.d/sudo-timeout; fi; visudo -c >/dev/null 2>&1'" "配置sudo密码缓存为$SUDO_TIMEOUT分钟"
     
     # 步骤3：更新software updater配置
     info ""
     info "步骤3：配置软件更新器"
     exec_cmd "sudo bash -c 'sed -i \"s/APT::Periodic::Update-Package-Lists \".*\";.*$/APT::Periodic::Update-Package-Lists \"0\";\"/ /etc/apt/apt.conf.d/10periodic; sed -i \"s/APT::Periodic::Download-Upgradeable-Packages \".*\";.*$/APT::Periodic::Download-Upgradeable-Packages \"0\";\"/ /etc/apt/apt.conf.d/10periodic; sed -i \"s/APT::Periodic::AutocleanInterval \".*\";.*$/APT::Periodic::AutocleanInterval \"7\";\"/ /etc/apt/apt.conf.d/10periodic; sed -i \"s/APT::Periodic::Unattended-Upgrade \".*\";.*$/APT::Periodic::Unattended-Upgrade \"0\";\"/ /etc/apt/apt.conf.d/10periodic; echo -e \"APT::Periodic::Update-Package-Lists \\\"0\\\";\nAPT::Periodic::Download-Upgradeable-Packages \\\"0\\\";\nAPT::Periodic::AutocleanInterval \\\"0\\\";\nAPT::Periodic::Unattended-Upgrade \\\"0\\\";\" > /etc/apt/apt.conf.d/20auto-upgrades'" "配置软件更新器"
     
-    # 步骤4：安装代理工具
+    # 步骤4：安装代理工具（可选，需要订阅链接参数）
     info ""
-    info "步骤4：安装代理工具"
-    exec_cmd "mkdir -p ~/Downloads" "创建Downloads目录"
-    exec_cmd "cd ~/Downloads && wget https://storage.abyss.moe/d/Proxy/Linux/clash-party-linux-1.8.9-amd64.deb" "下载Clash代理工具"
-    exec_cmd "sudo dpkg -i ~/Downloads/clash-party-linux-1.8.9-amd64.deb" "安装Clash代理工具"
+    info "步骤4：安装代理工具（可选）"
+    install_proxy_tool "$1"  # 传递第一个命令行参数作为订阅链接
     
     # 步骤5：安装终端工具
     info ""
@@ -320,7 +370,17 @@ main() {
     info "安装字体..."
     exec_cmd "sudo apt install -y fontconfig" "安装fontconfig"
     exec_cmd "sudo mkdir -p /usr/share/fonts/ttf-custom" "创建字体目录"
-    exec_cmd "sudo cp ~/Documents/Obsidian/Consolas.ttf /usr/share/fonts/ttf-custom/" "复制Consolas字体（从当前目录）"
+    
+    # 检查Consolas字体文件是否存在
+    if [ -f "Consolas.ttf" ]; then
+        exec_cmd "sudo cp Consolas.ttf /usr/share/fonts/ttf-custom/" "复制Consolas字体"
+    elif [ -f "~/Documents/Obsidian/Consolas.ttf" ]; then
+        exec_cmd "sudo cp ~/Documents/Obsidian/Consolas.ttf /usr/share/fonts/ttf-custom/" "从Obsidian目录复制Consolas字体"
+    else
+        warn "未找到Consolas.ttf字体文件，尝试从网络下载"
+        exec_cmd "sudo wget -O /usr/share/fonts/ttf-custom/consolas.ttf https://raw.githubusercontent.com/ranyev5/Doc/main/Consolas.ttf" "从网络下载Consolas字体"
+    fi
+    
     exec_cmd "sudo chmod 644 /usr/share/fonts/ttf-custom/*.ttf" "设置字体权限"
     exec_cmd "sudo chown root:root /usr/share/fonts/ttf-custom/*.ttf" "设置字体所有者"
     exec_cmd "fc-cache -fv" "刷新字体缓存"
@@ -376,9 +436,10 @@ EOF
     info "注意事项："
     info "- 若使用 X11 环境：按下 Alt + F2，输入 r，回车即可立即生效所有扩展"
     info "- 若使用 Wayland 环境：请注销当前用户，重新登录即可生效所有扩展"
-    info "- JetBrains IDE需要手动安装并激活"
+    info "- JetBrains IDE需要通过Toolbox手动安装并激活"
+    info "- 请重新启动终端以应用新的shell配置"
     info "========================================"
 }
 
-# 调用主函数
-main
+# 调用主函数，传递所有命令行参数
+main "$@"
