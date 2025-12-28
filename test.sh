@@ -74,7 +74,6 @@ exec_cmd() {
     
     # 执行命令并同时记录输出到日志文件，不使用重定向隐藏输出
     if eval "$cmd" | tee -a "$LOG_FILE"; then
-        echo $?
         log_to_file "$LOG_LEVEL_INFO" "$desc 成功"
         return 0
     else
