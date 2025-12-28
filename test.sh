@@ -360,7 +360,7 @@ install_proxy_tool() {
     exec_cmd "clashon" "开启系统代理"
     
     cd - || return
-    exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
+    # exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
     log_to_file "$LOG_LEVEL_INFO" "代理工具安装完成，已开启系统代理"
     log_to_file "$LOG_LEVEL_INFO" "可以通过 clashui 命令查看 Web 控制台信息"
 }
