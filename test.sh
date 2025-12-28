@@ -340,7 +340,7 @@ install_proxy_tool() {
     local SUBSCRIBE_URL="$1"
     local REPO_URL="https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git"
     local INSTALL_DIR="~/.clash/clash-for-linux-install"
-    
+    mkdir -p ~/.clash
     # 安装依赖工具
     exec_cmd "sudo apt update && sudo apt install -y git curl wget" "安装代理工具依赖"
     
