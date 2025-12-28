@@ -353,6 +353,7 @@ install_proxy_tool() {
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
     cd "$INSTALL_DIR"
+    exec_cmd "sed -i \"s|^URL_GH_PROXY=.*|URL_GH_PROXY=|\" \".env\"" "清空代理"
     exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
     source $HOME/.bashrc
