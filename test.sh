@@ -72,8 +72,8 @@ exec_cmd() {
         info "$desc..."
     fi
     
-    # 执行命令并同时记录输出到日志文件
-    if eval "$cmd" >> "$LOG_FILE"; then
+    # 执行命令并同时记录输出到日志文件，不使用重定向隐藏输出
+    if eval "$cmd" | tee -a "$LOG_FILE"; then
         echo $?
         log_to_file "$LOG_LEVEL_INFO" "$desc 成功"
         return 0
@@ -90,16 +90,16 @@ configure_sudo_timeout() {
     info "配置sudo密码缓存为$timeout分钟..."
     
     # 使用here-doc方式创建配置脚本，避免转义字符问题
-    sudo bash << EOF >> "$LOG_FILE" 2>&1
+    sudo bash << EOF | tee -a "$LOG_FILE"
 TARGET_TIMEOUT=$timeout
 
 # 检查是否存在有效配置
-if grep -q "^Defaults\s\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>/dev/null; then
+if grep -q "^Defaults\s\+timestamp_timeout=" /etc/sudoers /etc/sudoers.d/* 2>&1; then
     # 存在配置，直接替换
     sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' /etc/sudoers
     
     # 同时修改sudoers.d目录下的匹配文件
-    grep -rl "^Defaults\s\+timestamp_timeout=" /etc/sudoers.d/* 2>/dev/null | while read FILE; do
+    grep -rl "^Defaults\s\+timestamp_timeout=" /etc/sudoers.d/* 2>&1 | while read FILE; do
         sed -i 's/^Defaults\s\+timestamp_timeout=.*/Defaults timestamp_timeout='$TARGET_TIMEOUT'/' \$FILE
     done
 else
@@ -109,7 +109,7 @@ else
 fi
 
 # 语法校验
-if visudo -c >/dev/null 2>&1; then
+if visudo -c 2>&1; then
     echo "sudo密码缓存配置成功！"
 else
     echo "sudo密码缓存配置失败！"
@@ -124,20 +124,20 @@ EOF
 refresh_extension_cache() {
     info "刷新 GNOME 扩展配置缓存..."
     # 步骤1：刷新用户级桌面/扩展索引
-    if command -v update-desktop-database &> /dev/null; then
-        update-desktop-database $HOME/.local/share/applications/ >> "$LOG_FILE" 2>&1
+    if command -v update-desktop-database; then
+        update-desktop-database $HOME/.local/share/applications/ | tee -a "$LOG_FILE"
         info "桌面扩展索引刷新完成"
         log_to_file "$LOG_LEVEL_INFO" "桌面扩展索引刷新完成"
     fi
 
     # 步骤2：确保扩展目录权限正确
-    chmod -R 755 $HOME/.local/share/gnome-shell/extensions/ >> "$LOG_FILE" 2>&1
+    chmod -R 755 $HOME/.local/share/gnome-shell/extensions/ | tee -a "$LOG_FILE"
     info "扩展目录权限已修复（755）"
     log_to_file "$LOG_LEVEL_INFO" "扩展目录权限已修复（755）"
 
     # 步骤3：重启 GNOME 扩展后台服务
-    if command -v busctl &> /dev/null; then
-        busctl --user restart org.gnome.Shell.Extensions >> "$LOG_FILE" 2>&1
+    if command -v busctl; then
+        busctl --user restart org.gnome.Shell.Extensions | tee -a "$LOG_FILE"
         info "GNOME 扩展后台服务已重启"
         log_to_file "$LOG_LEVEL_INFO" "GNOME 扩展后台服务已重启"
     fi
@@ -168,7 +168,7 @@ install_gnome_extensions() {
     )
     
     # 检查必备工具
-    if ! command -v gnome-extensions &> /dev/null; then
+    if ! command -v gnome-extensions; then
         error "未找到 gnome-extensions 命令，请先安装 GNOME 扩展核心依赖"
         log_to_file "$LOG_LEVEL_ERROR" "未找到 gnome-extensions 命令，请先安装 GNOME 扩展核心依赖"
         return 1
@@ -176,9 +176,9 @@ install_gnome_extensions() {
     
     # 选择下载工具
     DOWNLOAD_TOOL=""
-    if command -v wget &> /dev/null; then
+    if command -v wget; then
         DOWNLOAD_TOOL="wget"
-    elif command -v curl &> /dev/null; then
+    elif command -v curl; then
         DOWNLOAD_TOOL="curl"
     else
         error "未找到 wget 或 curl"
@@ -187,15 +187,16 @@ install_gnome_extensions() {
     fi
     
     # 检查 GNOME Shell 版本
-    if ! GNOME_VERSION=$(gnome-shell --version | awk '{print $3}' >> "$LOG_FILE" 2>&1); then
+    if GNOME_VERSION=$(gnome-shell --version | awk '{print $3}'); then
+        info "当前 GNOME Shell 版本：$GNOME_VERSION"
+        log_to_file "$LOG_LEVEL_INFO" "当前 GNOME Shell 版本：$GNOME_VERSION"
+        warn "请确保所有下载的扩展与该版本兼容"
+        log_to_file "$LOG_LEVEL_WARN" "请确保所有下载的扩展与该版本兼容"
+    else
         error "无法获取 GNOME Shell 版本"
         log_to_file "$LOG_LEVEL_ERROR" "无法获取 GNOME Shell 版本"
         return 1
     fi
-    info "当前 GNOME Shell 版本：$GNOME_VERSION"
-    log_to_file "$LOG_LEVEL_INFO" "当前 GNOME Shell 版本：$GNOME_VERSION"
-    warn "请确保所有下载的扩展与该版本兼容"
-    log_to_file "$LOG_LEVEL_WARN" "请确保所有下载的扩展与该版本兼容"
     
     # 验证数组长度
     if [ "${#EXTENSION_DOWNLOAD_URLS[@]}" -ne "${#TARGET_EXTENSION_IDS[@]}" ]; then
@@ -222,45 +223,53 @@ install_gnome_extensions() {
         
         # 下载扩展包
         if [ "$DOWNLOAD_TOOL" = "wget" ]; then
-            log_to_file "$LOG_LEVEL_DEBUG" "执行命令: wget -q -O \"$CURRENT_EXTENSION_ZIP_PATH\" \"$CURRENT_DOWNLOAD_URL\""
-            wget -q -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" >> "$LOG_FILE" 2>&1 || {
+            log_to_file "$LOG_LEVEL_DEBUG" "执行命令: wget -O \"$CURRENT_EXTENSION_ZIP_PATH\" \"$CURRENT_DOWNLOAD_URL\""
+            if wget -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" | tee -a "$LOG_FILE"; then
+                info "下载成功: $CURRENT_DOWNLOAD_URL"
+            else
                 error "下载失败: $CURRENT_DOWNLOAD_URL"
                 log_to_file "$LOG_LEVEL_ERROR" "下载失败: $CURRENT_DOWNLOAD_URL"
                 FAIL_COUNT=$((FAIL_COUNT+1))
                 continue
-            }
+            fi
         else
-            log_to_file "$LOG_LEVEL_DEBUG" "执行命令: curl -s -o \"$CURRENT_EXTENSION_ZIP_PATH\" \"$CURRENT_DOWNLOAD_URL\""
-            curl -s -o "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" >> "$LOG_FILE" 2>&1 || {
+            log_to_file "$LOG_LEVEL_DEBUG" "执行命令: curl -o \"$CURRENT_EXTENSION_ZIP_PATH\" \"$CURRENT_DOWNLOAD_URL\""
+            if curl -o "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" | tee -a "$LOG_FILE"; then
+                info "下载成功: $CURRENT_DOWNLOAD_URL"
+            else
                 error "下载失败: $CURRENT_DOWNLOAD_URL"
                 log_to_file "$LOG_LEVEL_ERROR" "下载失败: $CURRENT_DOWNLOAD_URL"
                 FAIL_COUNT=$((FAIL_COUNT+1))
                 continue
-            }
+            fi
         fi
         
         # 安装扩展
         log_to_file "$LOG_LEVEL_DEBUG" "执行命令: gnome-extensions install -f \"$CURRENT_EXTENSION_ZIP_PATH\""
-        gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" >> "$LOG_FILE" 2>&1 || {
+        if gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" | tee -a "$LOG_FILE"; then
+            info "安装成功: $CURRENT_EXTENSION_ID"
+        else
             error "安装失败: $CURRENT_EXTENSION_ID"
             log_to_file "$LOG_LEVEL_ERROR" "安装失败: $CURRENT_EXTENSION_ID"
             FAIL_COUNT=$((FAIL_COUNT+1))
             continue
-        }
+        fi
         
         # 刷新缓存
         refresh_extension_cache
         
         # 启用扩展
         log_to_file "$LOG_LEVEL_DEBUG" "检查扩展是否存在: gnome-extensions list | grep -q \"$CURRENT_EXTENSION_ID\""
-        if gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID" >> "$LOG_FILE" 2>&1; then
+        if gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID"; then
             log_to_file "$LOG_LEVEL_DEBUG" "执行命令: gnome-extensions enable \"$CURRENT_EXTENSION_ID\""
-            gnome-extensions enable "$CURRENT_EXTENSION_ID" >> "$LOG_FILE" 2>&1 || {
+            if gnome-extensions enable "$CURRENT_EXTENSION_ID" | tee -a "$LOG_FILE"; then
+                info "启用成功: $CURRENT_EXTENSION_ID"
+            else
                 error "启用失败: $CURRENT_EXTENSION_ID"
                 log_to_file "$LOG_LEVEL_ERROR" "启用失败: $CURRENT_EXTENSION_ID"
                 FAIL_COUNT=$((FAIL_COUNT+1))
                 continue
-            }
+            fi
         else
             error "未找到扩展 ID: $CURRENT_EXTENSION_ID"
             log_to_file "$LOG_LEVEL_ERROR" "未找到扩展 ID: $CURRENT_EXTENSION_ID"
@@ -270,7 +279,7 @@ install_gnome_extensions() {
         
         # 验证结果
         log_to_file "$LOG_LEVEL_DEBUG" "验证扩展是否启用: gnome-extensions list --enabled | grep -q \"$CURRENT_EXTENSION_ID\""
-        if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID" >> "$LOG_FILE" 2>&1; then
+        if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID"; then
             info "扩展 $CURRENT_EXTENSION_ID 安装并启用成功"
             log_to_file "$LOG_LEVEL_INFO" "扩展 $CURRENT_EXTENSION_ID 安装并启用成功"
             SUCCESS_COUNT=$((SUCCESS_COUNT+1))
@@ -293,7 +302,7 @@ install_themes() {
     # 检查依赖
     local dependencies=("git" "sassc" "gtk2-engines-murrine" "gnome-themes-extra")
     for dep in "${dependencies[@]}"; do
-        if ! dpkg -s "$dep" &> /dev/null; then
+        if ! dpkg -s "$dep"; then
             exec_cmd "sudo apt install -y $dep" "安装依赖 $dep"
         fi
     done
@@ -303,11 +312,11 @@ install_themes() {
     log_to_file "$LOG_LEVEL_DEBUG" "临时目录: $temp_dir"
     
     log_to_file "$LOG_LEVEL_DEBUG" "执行命令: git clone https://github.com/vinceliuice/Orchis-theme.git \"$temp_dir/orchis\""
-    git clone https://github.com/vinceliuice/Orchis-theme.git "$temp_dir/orchis" >> "$LOG_FILE" 2>&1
+    git clone https://github.com/vinceliuice/Orchis-theme.git "$temp_dir/orchis" | tee -a "$LOG_FILE"
     cd "$temp_dir/orchis" || { error "无法进入 Orchis 目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入 Orchis 目录"; return 1; }
     chmod +x install.sh
     log_to_file "$LOG_LEVEL_DEBUG" "执行命令: ./install.sh -t all -c all -s all --tweaks macos"
-    ./install.sh -t all -c all -s all --tweaks macos >> "$LOG_FILE" 2>&1
+    ./install.sh -t all -c all -s all --tweaks macos | tee -a "$LOG_FILE"
     cd - || return
     rm -rf "$temp_dir/orchis"
     info "Orchis 主题安装完成"
@@ -315,11 +324,11 @@ install_themes() {
     
     # 安装 Tela 图标主题
     log_to_file "$LOG_LEVEL_DEBUG" "执行命令: git clone https://github.com/vinceliuice/Tela-icon-theme.git \"$temp_dir/tela\""
-    git clone https://github.com/vinceliuice/Tela-icon-theme.git "$temp_dir/tela" >> "$LOG_FILE" 2>&1
+    git clone https://github.com/vinceliuice/Tela-icon-theme.git "$temp_dir/tela" | tee -a "$LOG_FILE"
     cd "$temp_dir/tela" || { error "无法进入 Tela 目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入 Tela 目录"; return 1; }
     chmod +x install.sh
     log_to_file "$LOG_LEVEL_DEBUG" "执行命令: ./install.sh -a"
-    ./install.sh -a >> "$LOG_FILE" 2>&1
+    ./install.sh -a | tee -a "$LOG_FILE"
     cd - || return
     rm -rf "$temp_dir/tela"
     info "Tela 图标主题安装完成"
@@ -353,7 +362,6 @@ install_proxy_tool() {
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
     cd "$INSTALL_DIR"
-    exec_cmd "sed -i \"s|^URL_GH_PROXY=.*|URL_GH_PROXY=|\" \".env\"" "清空代理"
     exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
     source $HOME/.bashrc
@@ -380,7 +388,7 @@ main() {
     log_to_file "$LOG_LEVEL_INFO" "========================================"
     
     # 记录系统信息
-    log_to_file "$LOG_LEVEL_INFO" "系统信息: $(lsb_release -a 2>/dev/null || cat /etc/os-release)"
+    log_to_file "$LOG_LEVEL_INFO" "系统信息: $(lsb_release -a || cat /etc/os-release)"
     
     # 检查系统版本
     if ! grep -q "24.04" /etc/os-release; then
@@ -450,16 +458,16 @@ main() {
     
     # 安装Google Chrome
     exec_cmd "sudo apt install -y wget apt-transport-https ca-certificates gnupg" "安装Chrome依赖"
-    exec_cmd "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome-keyring.gpg > /dev/null" "导入Chrome密钥"
-    exec_cmd "echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb/ stable main\" | sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null" "添加Chrome源"
+    exec_cmd "wget -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome-keyring.gpg" "导入Chrome密钥"
+    exec_cmd "echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb/ stable main\" | sudo tee /etc/apt/sources.list.d/google-chrome.list" "添加Chrome源"
     exec_cmd "sudo apt update" "更新软件源"
     exec_cmd "sudo apt install -y google-chrome-stable" "安装Chrome"
     exec_cmd "sudo ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome" "创建Chrome软链接"
     exec_cmd "xdg-settings set default-web-browser google-chrome.desktop" "设置Chrome为默认浏览器"
     
     # 安装VS Code
-    exec_cmd "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /usr/share/keyrings/vscode-keyring.gpg >/dev/null" "导入VS Code密钥"
-    exec_cmd "echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/vscode-keyring.gpg] https://packages.microsoft.com/repos/vscode stable main\" | sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null" "添加VS Code源"
+    exec_cmd "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /usr/share/keyrings/vscode-keyring.gpg" "导入VS Code密钥"
+    exec_cmd "echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/vscode-keyring.gpg] https://packages.microsoft.com/repos/vscode stable main\" | sudo tee /etc/apt/sources.list.d/vscode.list" "添加VS Code源"
     exec_cmd "sudo apt update" "更新软件源"
     exec_cmd "sudo apt install -y code" "安装VS Code"
     
@@ -468,10 +476,10 @@ main() {
     local JB_TOOLBOX_TAR="jetbrains-toolbox-3.2.0.65851.tar.gz"
     local JB_DOWNLOAD_URL="https://download-cdn.jetbrains.com/toolbox/jetbrains-toolbox-3.2.0.65851.tar.gz"
     
-    exec_cmd "wget -q -O $JB_TOOLBOX_TAR $JB_DOWNLOAD_URL" "下载JetBrains Toolbox"
+    exec_cmd "wget -O $JB_TOOLBOX_TAR $JB_DOWNLOAD_URL" "下载JetBrains Toolbox"
     exec_cmd "mkdir -p $JB_TOOLBOX_DIR" "创建Toolbox目录"
     exec_cmd "tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1" "解压Toolbox"
-    exec_cmd "$JB_TOOLBOX_DIR/jetbrains-toolbox >/dev/null 2>&1 & sleep 10" "首次启动Toolbox"
+    exec_cmd "$JB_TOOLBOX_DIR/jetbrains-toolbox && sleep 10" "首次启动Toolbox"
     exec_cmd "rm -f $JB_TOOLBOX_TAR" "清理安装文件"
     
     # 清理系统缓存
