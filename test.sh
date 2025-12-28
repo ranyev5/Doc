@@ -350,6 +350,7 @@ install_proxy_tool() {
     fi
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
+    sleep 20
     cd "$INSTALL_DIR"
     exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
     source ~/.clash/clashctl/scripts/cmd/clashctl.sh
