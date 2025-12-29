@@ -2,7 +2,7 @@
 
 # Ubuntu 24.04 完整安装与美化脚本
 # 功能：一键完成系统基础配置、软件安装和界面美化
-# 版本：1.2 (添加日志功能)
+# 版本：1.3 (删除刷新缓存方法并优化代码)
 # 更新日期：2024年
 
 # -------------------- 日志配置 --------------------
@@ -117,32 +117,6 @@ fi
 EOF
 }
 
-# 刷新 GNOME 扩展配置缓存
-refresh_extension_cache() {
-    info "刷新 GNOME 扩展配置缓存..."
-    # 步骤1：刷新用户级桌面/扩展索引
-    if command -v update-desktop-database; then
-        update-desktop-database $HOME/.local/share/applications/ | tee -a "$LOG_FILE"
-        info "桌面扩展索引刷新完成"
-        log_to_file "$LOG_LEVEL_INFO" "桌面扩展索引刷新完成"
-    fi
-
-    # 步骤2：确保扩展目录权限正确
-    chmod -R 755 $HOME/.local/share/gnome-shell/extensions/ | tee -a "$LOG_FILE"
-    info "扩展目录权限已修复（755）"
-    log_to_file "$LOG_LEVEL_INFO" "扩展目录权限已修复（755）"
-
-    # 步骤3：重启 GNOME 扩展后台服务
-    if command -v busctl; then
-        busctl --user restart org.gnome.Shell.Extensions | tee -a "$LOG_FILE"
-        info "GNOME 扩展后台服务已重启"
-        log_to_file "$LOG_LEVEL_INFO" "GNOME 扩展后台服务已重启"
-    fi
-
-    info "扩展配置缓存刷新完成"
-    log_to_file "$LOG_LEVEL_INFO" "扩展配置缓存刷新完成"
-}
-
 # 安装 GNOME 扩展
 install_gnome_extensions() {
     info "安装 GNOME 扩展..."
@@ -222,7 +196,7 @@ install_gnome_extensions() {
         if [ "$DOWNLOAD_TOOL" = "wget" ]; then
             log_to_file "$LOG_LEVEL_DEBUG" "执行命令: wget -O \"$CURRENT_EXTENSION_ZIP_PATH\" \"$CURRENT_DOWNLOAD_URL\""
             if wget -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" | tee -a "$LOG_FILE"; then
-                info "下载成功: $CURRENT_DOWNLOAD_URL"
+                info "下载成功: $CURRENT_EXTENSION_URL"
             else
                 error "下载失败: $CURRENT_DOWNLOAD_URL"
                 log_to_file "$LOG_LEVEL_ERROR" "下载失败: $CURRENT_DOWNLOAD_URL"
@@ -245,6 +219,7 @@ install_gnome_extensions() {
         log_to_file "$LOG_LEVEL_DEBUG" "执行命令: gnome-extensions install -f \"$CURRENT_EXTENSION_ZIP_PATH\""
         if gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" | tee -a "$LOG_FILE"; then
             info "安装成功: $CURRENT_EXTENSION_ID"
+            SUCCESS_COUNT=$((SUCCESS_COUNT+1))
         else
             error "安装失败: $CURRENT_EXTENSION_ID"
             log_to_file "$LOG_LEVEL_ERROR" "安装失败: $CURRENT_EXTENSION_ID"
@@ -265,7 +240,7 @@ install_themes() {
     # 检查依赖
     local dependencies=("git" "sassc" "gtk2-engines-murrine" "gnome-themes-extra")
     for dep in "${dependencies[@]}"; do
-        if ! dpkg -s "$dep"; then
+        if ! dpkg -s "$dep" &> /dev/null; then
             exec_cmd "sudo apt install -y $dep" "安装依赖 $dep"
         fi
     done
@@ -324,20 +299,24 @@ install_proxy_tool() {
     fi
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
-    cd "$INSTALL_DIR"
-    exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
-    exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
-    source $HOME/.bashrc
-    source $HOME/.clash/clashctl/scripts/cmd/clashctl.sh
+
+    source $HOME/.bashrc 2>/dev/null || true
+    source $HOME/.clash/clashctl/scripts/cmd/clashctl.sh 2>/dev/null || true
+    (
+        cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
+        exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
+        exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
+        
+        # 更新订阅并开启代理
+        exec_cmd "clashctl off" "关闭系统代理"
+        sleep 10
+        exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
+        exec_cmd "clashtun on" "开启隧道模式"
+    )
     
+    # 重新加载shell配置
+
     
-    # 更新订阅并开启代理
-    exec_cmd "clashctl off" "关闭系统代理"
-    sleep 10
-    exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
-    exec_cmd "clashtun on" "开启隧道模式"
-    cd - || return
-    # exec_cmd "rm -rf $INSTALL_DIR" "清理安装文件"
     log_to_file "$LOG_LEVEL_INFO" "代理工具安装完成，已开启系统代理"
     log_to_file "$LOG_LEVEL_INFO" "可以通过 clashui 命令查看 Web 控制台信息"
 }
@@ -402,7 +381,7 @@ main() {
     
     exec_cmd "sudo apt install -y terminator autojump zsh" "安装terminator、autojump、zsh"
     exec_cmd "chsh -s $(which zsh)" "设置zsh为默认shell"
-    exec_cmd "sh -c \"$(sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\")\"" "安装Oh My Zsh"
+    exec_cmd "sh -c \"$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\"" "安装Oh My Zsh"
     
     # 安装zsh插件
     exec_cmd "git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.oh-my-zsh/plugins/zsh-autosuggestions" "安装zsh-autosuggestions插件"
@@ -444,7 +423,7 @@ main() {
     exec_cmd "wget -O $JB_TOOLBOX_TAR $JB_DOWNLOAD_URL" "下载JetBrains Toolbox"
     exec_cmd "mkdir -p $JB_TOOLBOX_DIR" "创建Toolbox目录"
     exec_cmd "tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1" "解压Toolbox"
-    exec_cmd "$JB_TOOLBOX_DIR/jetbrains-toolbox && sleep 10" "首次启动Toolbox"
+    exec_cmd "$JB_TOOLBOX_DIR/jetbrains-toolbox & sleep 10" "首次启动Toolbox"
     exec_cmd "rm -f $JB_TOOLBOX_TAR" "清理安装文件"
     
     # 清理系统缓存
