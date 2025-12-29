@@ -300,22 +300,18 @@ install_proxy_tool() {
     exec_cmd "git clone --branch master --depth 1 $REPO_URL $INSTALL_DIR" "克隆代理工具仓库"
     
 
+    cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
+    exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
+    exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
+
     source $HOME/.bashrc 2>/dev/null || true
     source $HOME/.clash/clashctl/scripts/cmd/clashctl.sh 2>/dev/null || true
-    (
-        cd "$INSTALL_DIR" || { error "无法进入安装目录"; log_to_file "$LOG_LEVEL_ERROR" "无法进入安装目录"; return 1; }
-        exec_cmd "sed -i \"s|^CLASH_BASE_DIR=.*|CLASH_BASE_DIR=$NEW_CLASH_BASE_DIR|\" \".env\"" "更新安装目录"
-        exec_cmd "echo $SUBSCRIBE_URL | bash install.sh" "执行代理工具安装"
-        
-        # 更新订阅并开启代理
-        exec_cmd "clashctl off" "关闭系统代理"
-        sleep 10
-        exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
-        exec_cmd "clashtun on" "开启隧道模式"
-    )
-    
-    # 重新加载shell配置
 
+    # 更新订阅并开启代理
+    exec_cmd "clashctl off" "关闭系统代理"
+    sleep 10
+    exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
+    exec_cmd "clashtun on" "开启隧道模式"
     
     log_to_file "$LOG_LEVEL_INFO" "代理工具安装完成，已开启系统代理"
     log_to_file "$LOG_LEVEL_INFO" "可以通过 clashui 命令查看 Web 控制台信息"
