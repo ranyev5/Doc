@@ -251,40 +251,6 @@ install_gnome_extensions() {
             FAIL_COUNT=$((FAIL_COUNT+1))
             continue
         fi
-        
-        # 刷新缓存
-        refresh_extension_cache
-        
-        # 启用扩展
-        log_to_file "$LOG_LEVEL_DEBUG" "检查扩展是否存在: gnome-extensions list | grep -q \"$CURRENT_EXTENSION_ID\""
-        if gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID"; then
-            log_to_file "$LOG_LEVEL_DEBUG" "执行命令: gnome-extensions enable \"$CURRENT_EXTENSION_ID\""
-            if gnome-extensions enable "$CURRENT_EXTENSION_ID" | tee -a "$LOG_FILE"; then
-                info "启用成功: $CURRENT_EXTENSION_ID"
-            else
-                error "启用失败: $CURRENT_EXTENSION_ID"
-                log_to_file "$LOG_LEVEL_ERROR" "启用失败: $CURRENT_EXTENSION_ID"
-                FAIL_COUNT=$((FAIL_COUNT+1))
-                continue
-            fi
-        else
-            error "未找到扩展 ID: $CURRENT_EXTENSION_ID"
-            log_to_file "$LOG_LEVEL_ERROR" "未找到扩展 ID: $CURRENT_EXTENSION_ID"
-            FAIL_COUNT=$((FAIL_COUNT+1))
-            continue
-        fi
-        
-        # 验证结果
-        log_to_file "$LOG_LEVEL_DEBUG" "验证扩展是否启用: gnome-extensions list --enabled | grep -q \"$CURRENT_EXTENSION_ID\""
-        if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID"; then
-            info "扩展 $CURRENT_EXTENSION_ID 安装并启用成功"
-            log_to_file "$LOG_LEVEL_INFO" "扩展 $CURRENT_EXTENSION_ID 安装并启用成功"
-            SUCCESS_COUNT=$((SUCCESS_COUNT+1))
-        else
-            warn "扩展 $CURRENT_EXTENSION_ID 已安装，但未成功启用"
-            log_to_file "$LOG_LEVEL_WARN" "扩展 $CURRENT_EXTENSION_ID 已安装，但未成功启用"
-            FAIL_COUNT=$((FAIL_COUNT+1))
-        fi
     done
     
     info "GNOME 扩展安装完成：成功 $SUCCESS_COUNT 个，失败 $FAIL_COUNT 个"
