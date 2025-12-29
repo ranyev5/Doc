@@ -376,9 +376,11 @@ main() {
     log_to_file "$LOG_LEVEL_INFO" "步骤5：安装终端工具"
     
     exec_cmd "sudo apt install -y terminator autojump zsh" "安装terminator、autojump、zsh"
-    exec_cmd "chsh -s $(which zsh)" "设置zsh为默认shell"
-    exec_cmd "sh -c \"$(curl -fsSL https://install.ohmyz.sh/)\"" "安装Oh My Zsh"
     exec_cmd "touch $HOME/.zshrc" "初始化zsh配置"
+    exec_cmd "chsh -s $(which zsh)" "设置zsh为默认shell"
+    source $HOME/.bashrc 2>/dev/null || true
+    exec_cmd "sh -c \"$(curl -fsSL https://install.ohmyz.sh/)\"" "安装Oh My Zsh"
+    
     # 安装zsh插件
     exec_cmd "git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.oh-my-zsh/plugins/zsh-autosuggestions" "安装zsh-autosuggestions插件"
     exec_cmd "git clone https://github.com/zsh-users/zsh-syntax-highlighting $HOME/.oh-my-zsh/plugins/zsh-syntax-highlighting" "安装zsh-syntax-highlighting插件"
