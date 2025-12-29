@@ -367,6 +367,7 @@ install_proxy_tool() {
     
     # 更新订阅并开启代理
     exec_cmd "clashctl off" "关闭系统代理"
+    sleep 10
     exec_cmd "clashsub update $SUBSCRIBE_URL" "更新代理订阅"
     exec_cmd "clashtun on" "开启隧道模式"
     cd - || return
