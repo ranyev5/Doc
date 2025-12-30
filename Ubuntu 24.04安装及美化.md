@@ -79,99 +79,10 @@ EOF
 
 ## 安装代理工具
 ``` shell
-#!/usr/bin/env bash
-  
-# 检查是否提供了订阅链接参数
-if [ $# -eq 0 ]; then
-    echo "请提供订阅链接作为参数"
-    echo "用法: $0 <订阅链接>"
-    exit 1
-fi
-  
-SUBSCRIBE_URL="$1"
-REPO_URL="https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git"
-INSTALL_DIR="clash-for-linux-install"
-  
-# 安装依赖工具
-install_dependencies() {
-    echo "正在安装必要依赖..."
-    if command -v apt &> /dev/null; then
-        sudo apt update && sudo apt install -y git curl wget
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y git curl wget
-    elif command -v dnf &> /dev/null; then
-        sudo dnf install -y git curl wget
-    elif command -v pacman &> /dev/null; then
-        sudo pacman -Syu --noconfirm git curl wget
-    else
-        echo "无法识别的包管理器，请手动安装 git、curl、wget"
-        exit 1
-    fi
-}
-  
-# 下载仓库
-clone_repo() {
-    echo "正在克隆仓库..."
-    if [ -d "$INSTALL_DIR" ]; then
-        rm -rf "$INSTALL_DIR"
-    fi
-    git clone --branch master --depth 1 "$REPO_URL" "$INSTALL_DIR" || {
-        echo "克隆仓库失败"
-        exit 1
-    }
-    cd "$INSTALL_DIR" || {
-        echo "进入安装目录失败"
-        exit 1
-    }
-}
-  
-# 配置订阅链接
-configure_subscribe() {
-    echo "正在配置订阅链接..."
-    # 设置环境变量中的订阅链接
-    sed -i "s|^CLASH_CONFIG_URL=.*|CLASH_CONFIG_URL=$SUBSCRIBE_URL|" .env
-}
-  
-# 执行安装
-run_install() {
-    echo "开始安装..."
-    bash install.sh || {
-        echo "安装失败"
-        exit 1
-    }
-}
-  
-# 更新订阅
-update_subscribe() {
-    echo "正在更新订阅..."
-    clashsub update "$SUBSCRIBE_URL" || {
-        echo "订阅更新失败"
-        exit 1
-    }
-}
-  
-# 开启系统代理
-start_proxy() {
-    echo "正在开启系统代理..."
-    clashon || {
-        echo "开启代理失败"
-        exit 1
-    }
-}
-  
-# 主流程
-main() {
-    install_dependencies
-    clone_repo
-    configure_subscribe
-    run_install
-    update_subscribe
-    start_proxy
-    echo "所有操作完成，代理已开启"
-    echo "可以通过 clashui 命令查看 Web 控制台信息"
-}
-  
-main
+cd $HOME/Downloads
+wget https://raw.githubusercontent.com/ranyev5/Doc/main/clash-party-linux-1.8.9-amd64.deb
+sudo apt install ./clash-party-linux-1.8.9-amd64.deb -y
+
 ```
 
 ## 安装终端工具
