@@ -60,25 +60,58 @@ error() {
 # 参数1：要执行的命令
 # 参数2：命令描述
 # 参数3：是否静默执行（可选）
+# 参数4：是否交互式命令（可选）
 exec_cmd() {
     local cmd="$1"
     local desc="$2"
-    local quiet="$3"
+    local quiet="${3:-false}"
+    local interactive="${4:-true}"
+    local temp_log=$(mktemp)
     
     # 记录命令执行信息
     log_to_file "$LOG_LEVEL_DEBUG" "执行命令: $cmd"
+    log_to_file "$LOG_LEVEL_DEBUG" "命令类型: $( [ "$interactive" = true ] && echo "交互式" || echo "非交互式" )"
     
     if [ -z "$quiet" ]; then
         info "$desc..."
     fi
     
-    # 执行命令并同时记录输出到日志文件，不使用重定向隐藏输出
-    if eval "$cmd" | tee -a "$LOG_FILE"; then
+    local exit_code=0
+    
+    if [ "$interactive" = true ]; then
+        # 处理交互式命令，使用script命令捕获输出
+        if command -v script > /dev/null; then
+            # 使用script命令记录会话，-q静默模式，-c执行命令，-f刷新输出
+            script -q -c "$cmd" -f "$temp_log"
+            exit_code=$?
+        else
+            # 如果没有script命令，直接执行但不记录输出
+            warn "系统未安装script命令，无法记录交互式命令输出"
+            eval "$cmd"
+            exit_code=$?
+        fi
+    else
+        # 处理非交互式命令，使用管道记录输出
+        if eval "$cmd" | tee -a "$LOG_FILE"; then
+            exit_code=0
+        else
+            exit_code=$?
+        fi
+    fi
+    
+    # 将临时日志内容追加到主日志文件
+    if [ -f "$temp_log" ]; then
+        cat "$temp_log" >> "$LOG_FILE"
+        rm -f "$temp_log"
+    fi
+    
+    # 检查命令执行结果
+    if [ $exit_code -eq 0 ]; then
         log_to_file "$LOG_LEVEL_INFO" "$desc 成功"
         return 0
     else
-        error "$desc 失败"
-        log_to_file "$LOG_LEVEL_ERROR" "$desc 失败"
+        error "$desc 失败，退出码: $exit_code"
+        log_to_file "$LOG_LEVEL_ERROR" "$desc 失败，退出码: $exit_code"
         return 1
     fi
 }
