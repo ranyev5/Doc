@@ -55,8 +55,9 @@ fi
 ```
 
 ## 更新software updater配置
-``` shell
 
+需要先手动在software updater点击close 初始化一下配置文件
+``` shell
 # 步骤1：设置禁用更新检查
 sudo sed -i 's/APT::Periodic::Update-Package-Lists ".*";/APT::Periodic::Update-Package-Lists "0";/' /etc/apt/apt.conf.d/10periodic
 
