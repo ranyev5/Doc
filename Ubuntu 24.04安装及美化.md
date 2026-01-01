@@ -1,6 +1,6 @@
 ## 基础工具安装
 ``` shell
-sudo apt update && sudo apt install vim git curl -y
+sudo apt update && sudo apt install vim git curl git-lfs -y
 ```
 
 ## 配置sudo 密码缓存时间
@@ -80,14 +80,15 @@ EOF
 ## 安装代理工具
 ``` shell
 cd $HOME/Downloads
-wget https://raw.githubusercontent.com/ranyev5/Doc/main/clash-party-linux-1.8.9-amd64.deb
-sudo apt install ./clash-party-linux-1.8.9-amd64.deb -y
-
+git lfs install
+git clone --recurse-submodules https://gh-proxy.org/https://github.com/ranyev5/Doc.git
+cd Doc
+sudo dpkg -i ./clash-party-linux-1.8.9-amd64.deb 
 ```
 
 ## 安装终端工具
 ``` shell
-cd ~/Downloads
+cd $HOME/Downloads
 sudo apt update && sudo apt install terminator autojump zsh -y 
 chsh -s $(which zsh)
 sh -c "$(curl -fsSL https://install.ohmyz.sh/)"
@@ -105,7 +106,6 @@ sed -i.bak \
 
 ## 安装常用软件
 ``` shell
-
 #!/bin/bash
 # 功能：Ubuntu24.04桌面版一键部署：卸载Firefox+安装Chrome(默认)+VS Code+JetBrains Toolbox（无额外自动配置/IDE安装）
 # 核心：1. 保留指定Chrome安装方法 2. 固定Toolbox下载链接 3. 删除IDE自动安装+Toolbox自动配置逻辑
@@ -116,14 +116,14 @@ NC='\033[0m'
 
 # 简化信息输出函数
 info() {
-    echo -e "${GREEN}[INFO] $1${NC}"
+    echo -e "${GREEN}[INFO] $1${NC}"
 }
 
 # 第一步：校验系统版本（确保是Ubuntu24.04）
 info "正在校验系统版本..."
 if [ ! -f /etc/os-release ] || ! grep -q "24.04" /etc/os-release; then
-    echo "错误：此脚本仅支持Ubuntu24.04系统！"
-    exit 1
+    echo "错误：此脚本仅支持Ubuntu24.04系统！"
+    exit 1
 fi
 
 # 第二步：卸载原生Firefox浏览器
@@ -153,11 +153,11 @@ sudo apt install -y google-chrome-stable >/dev/null 2>&1
 
 # 5. 优化：自动创建软链接（解决zsh/bash command not found问题）+ 设置默认浏览器
 if [ -f /opt/google/chrome/google-chrome ]; then
-    sudo ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome >/dev/null 2>&1
-    xdg-settings set default-web-browser google-chrome.desktop >/dev/null 2>&1
-    info "Google Chrome安装完成并设为默认浏览器"
+    sudo ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome >/dev/null 2>&1
+    xdg-settings set default-web-browser google-chrome.desktop >/dev/null 2>&1
+    info "Google Chrome安装完成并设为默认浏览器"
 else
-    echo "警告：Chrome安装失败，可手动下载deb包安装"
+    echo "警告：Chrome安装失败，可手动下载deb包安装"
 fi
 
 # 第四步：安装Visual Studio Code (VS Code)
@@ -186,17 +186,17 @@ wget -q -O $JB_TOOLBOX_TAR $JB_DOWNLOAD_URL >/dev/null 2>&1
 
 # 3. 解压并安装（容错处理，确保目录存在，删除自动配置相关步骤）
 if [ -f $JB_TOOLBOX_TAR ]; then
-    mkdir -p $JB_TOOLBOX_DIR
-    tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1 >/dev/null 2>&1
-    # 首次启动Toolbox（后台运行，生成基础配置，无额外自定义配置）
-    info "首次启动JetBrains Toolbox，生成基础配置文件..."
-    $JB_TOOLBOX_DIR/jetbrains-toolbox >/dev/null 2>&1 &
-    sleep 10 # 恢复默认等待时间，仅确保基础初始化完成
-    # 清理下载的压缩包，释放空间
-    rm -f $JB_TOOLBOX_TAR
-    info "JetBrains Toolbox 3.2.0.65851安装完成"
+    mkdir -p $JB_TOOLBOX_DIR
+    tar -xzf $JB_TOOLBOX_TAR -C $JB_TOOLBOX_DIR --strip-components=1 >/dev/null 2>&1
+    # 首次启动Toolbox（后台运行，生成基础配置，无额外自定义配置）
+    info "首次启动JetBrains Toolbox，生成基础配置文件..."
+    $JB_TOOLBOX_DIR/jetbrains-toolbox >/dev/null 2>&1 &
+    sleep 10 # 恢复默认等待时间，仅确保基础初始化完成
+    # 清理下载的压缩包，释放空间
+    rm -f $JB_TOOLBOX_TAR
+    info "JetBrains Toolbox 3.2.0.65851安装完成"
 else
-    echo "警告：JetBrains Toolbox压缩包下载失败，请检查网络或链接有效性"
+    echo "警告：JetBrains Toolbox压缩包下载失败，请检查网络或链接有效性"
 fi
 
 # 第六步：清理系统缓存，释放磁盘空间（删除原IDE自动安装步骤）
@@ -214,10 +214,9 @@ info "3. JetBrains Toolbox可在应用菜单中找到（版本3.2.0.65851，需�
 info "=============================================="
 exit 0
 ```
-```
 
 # Jetbrain ide 激活参考
-
+```
 # [CodeKey Run](https://ckey.run/)
 wget -q ckey.run -O ckey.run && bash ckey.run
 ```
@@ -234,22 +233,22 @@ sudo apt install gnome-shell gnome-shell-extension-manager gnome-tweaks -y
 # 说明：在配置区域添加多个扩展的「下载链接」和「扩展 ID」即可批量处理
 # ===================== 配置区域（需手动修改，支持添加多个扩展）=====================
 EXTENSION_DOWNLOAD_URLS=(
-    # 示例1：Apps Menu 扩展
-    "https://extensions.gnome.org/extension-data/apps-menugnome-shell-extensions.gcampax.github.com.v61.shell-extension.zip"
-    # 示例2：User Themes 扩展
-    "https://extensions.gnome.org/extension-data/user-themegnome-shell-extensions.gcampax.github.com.v60.shell-extension.zip"
-    #  Dish To Dock
-    "https://extensions.gnome.org/extension-data/dash-to-dockmicxgx.gmail.com.v102.shell-extension.zip"
-    "https://extensions.gnome.org/extension-data/clipboard-indicatortudmotu.com.v69.shell-extension.zip"
-    "https://extensions.gnome.org/extension-data/CoverflowAltTabpalatis.blogspot.com.v77.shell-extension.zip"
+    # 示例1：Apps Menu 扩展
+    "https://extensions.gnome.org/extension-data/apps-menugnome-shell-extensions.gcampax.github.com.v61.shell-extension.zip"
+    # 示例2：User Themes 扩展
+    "https://extensions.gnome.org/extension-data/user-themegnome-shell-extensions.gcampax.github.com.v60.shell-extension.zip"
+    #  Dish To Dock
+    "https://extensions.gnome.org/extension-data/dash-to-dockmicxgx.gmail.com.v102.shell-extension.zip"
+    "https://extensions.gnome.org/extension-data/clipboard-indicatortudmotu.com.v69.shell-extension.zip"
+    "https://extensions.gnome.org/extension-data/CoverflowAltTabpalatis.blogspot.com.v77.shell-extension.zip"
 )
  
 TARGET_EXTENSION_IDS=(
-    "apps-menu@gnome-shell-extensions.gcampax.github.com"
-    "user-theme@gnome-shell-extensions.gcampax.github.com"
-    "dash-to-dock@micxgx.gmail.com"
-    "clipboard-indicator@tudmotu.com"
-    "CoverflowAltTab@palatis.blogspot.com"
+    "apps-menu@gnome-shell-extensions.gcampax.github.com"
+    "user-theme@gnome-shell-extensions.gcampax.github.com"
+    "dash-to-dock@micxgx.gmail.com"
+    "clipboard-indicator@tudmotu.com"
+    "CoverflowAltTab@palatis.blogspot.com"
 )
 
 # =================================================================
@@ -266,80 +265,80 @@ NC='\033[0m' # 恢复默认颜色
 
 # 函数：打印信息
 info_log() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1"
 }
  
 
 # 函数：打印警告
 warn_log() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
  
 
 # 函数：打印错误并退出（全局致命错误）
 error_log() {
-    echo -e "${RED}[ERROR]${NC} $1"
-    exit 1
+    echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
 }
  
 
 # 函数：打印单个扩展操作错误（不终止批量流程）
 ext_error_log() {
-    echo -e "${RED}[EXT-ERROR]${NC} $1"
+    echo -e "${RED}[EXT-ERROR]${NC} $1"
 }
  
 
 # 新增函数：刷新 GNOME 扩展配置缓存（核心解决list查询不到问题）
 refresh_extension_cache() {
-    info_log "正在刷新 GNOME 扩展配置缓存..."
-    # 步骤1：刷新用户级桌面/扩展索引（无侵入，优先推荐）
-    if command -v update-desktop-database &> /dev/null; then
-        update-desktop-database ~/.local/share/applications/ &> /dev/null
-        info_log "步骤1：桌面扩展索引刷新完成"
-    else
-        warn_log "步骤1：未找到 update-desktop-database，跳过该刷新方式"
-    fi
+    info_log "正在刷新 GNOME 扩展配置缓存..."
+    # 步骤1：刷新用户级桌面/扩展索引（无侵入，优先推荐）
+    if command -v update-desktop-database &> /dev/null; then
+        update-desktop-database ~/.local/share/applications/ &> /dev/null
+        info_log "步骤1：桌面扩展索引刷新完成"
+    else
+        warn_log "步骤1：未找到 update-desktop-database，跳过该刷新方式"
+    fi
  
-    # 步骤2：确保扩展目录权限正确（避免权限问题导致无法识别）
-    chmod -R 755 ~/.local/share/gnome-shell/extensions/ &> /dev/null
-    info_log "步骤2：扩展目录权限已修复（755）"
+    # 步骤2：确保扩展目录权限正确（避免权限问题导致无法识别）
+    chmod -R 755 ~/.local/share/gnome-shell/extensions/ &> /dev/null
+    info_log "步骤2：扩展目录权限已修复（755）"
  
-    # 步骤3：重启 GNOME 扩展后台服务（强有效，备用）
-    if command -v busctl &> /dev/null; then
-        busctl --user restart org.gnome.Shell.Extensions &> /dev/null
-        info_log "步骤3：GNOME 扩展后台服务已重启"
-    else
-        warn_log "步骤3：未找到 busctl，跳过服务重启（部分发行版无需此步骤）"
-    fi
+    # 步骤3：重启 GNOME 扩展后台服务（强有效，备用）
+    if command -v busctl &> /dev/null; then
+        busctl --user restart org.gnome.Shell.Extensions &> /dev/null
+        info_log "步骤3：GNOME 扩展后台服务已重启"
+    else
+        warn_log "步骤3：未找到 busctl，跳过服务重启（部分发行版无需此步骤）"
+    fi
  
-    info_log "扩展配置缓存刷新完成，可立即查询新安装扩展"
+    info_log "扩展配置缓存刷新完成，可立即查询新安装扩展"
 }
  
 
 # 步骤1：检查必备工具是否安装
 info_log "===== 步骤1：检查必备全局工具 ====="
 if ! command -v gnome-extensions &> /dev/null; then
-    error_log "未找到 gnome-extensions 命令，请先安装 GNOME 扩展核心依赖（gnome-shell-extensions）"
+    error_log "未找到 gnome-extensions 命令，请先安装 GNOME 扩展核心依赖（gnome-shell-extensions）"
 fi
  
 
 # 选择下载工具（优先 wget，无则用 curl）
 DOWNLOAD_TOOL=""
 if command -v wget &> /dev/null; then
-    DOWNLOAD_TOOL="wget"
-    info_log "检测到 wget，将使用 wget 进行下载"
+    DOWNLOAD_TOOL="wget"
+    info_log "检测到 wget，将使用 wget 进行下载"
 elif command -v curl &> /dev/null; then
-    DOWNLOAD_TOOL="curl"
-    info_log "检测到 curl，将使用 curl 进行下载"
+    DOWNLOAD_TOOL="curl"
+    info_log "检测到 curl，将使用 curl 进行下载"
 else
-    error_log "未找到 wget 或 curl，请先安装其中一个下载工具（sudo apt install wget/curl）"
+    error_log "未找到 wget 或 curl，请先安装其中一个下载工具（sudo apt install wget/curl）"
 fi
  
 
 # 步骤2：检查 GNOME Shell 版本
 info_log "\n===== 步骤2：检查 GNOME Shell 版本 ====="
 if ! GNOME_VERSION=$(gnome-shell --version | awk '{print $3}'); then
-    error_log "无法获取 GNOME Shell 版本，请确认已安装 GNOME 桌面环境"
+    error_log "无法获取 GNOME Shell 版本，请确认已安装 GNOME 桌面环境"
 fi
 info_log "当前 GNOME Shell 版本：$GNOME_VERSION"
 warn_log "请确保所有下载的扩展与该版本兼容，否则可能无法正常工作"
@@ -351,7 +350,7 @@ DOWNLOAD_URLS_LEN=${#EXTENSION_DOWNLOAD_URLS[@]}
 EXTENSION_IDS_LEN=${#TARGET_EXTENSION_IDS[@]}
  
 if [ "$DOWNLOAD_URLS_LEN" -ne "$EXTENSION_IDS_LEN" ]; then
-    error_log "配置错误！下载链接数组长度（$DOWNLOAD_URLS_LEN）与扩展 ID 数组长度（$EXTENSION_IDS_LEN）不一致，请检查配置区域"
+    error_log "配置错误！下载链接数组长度（$DOWNLOAD_URLS_LEN）与扩展 ID 数组长度（$EXTENSION_IDS_LEN）不一致，请检查配置区域"
 fi
 info_log "验证通过，共配置 $DOWNLOAD_URLS_LEN 个扩展，将开始批量处理"
  
@@ -369,80 +368,80 @@ FAIL_COUNT=0
 
 # 循环遍历数组，处理每个扩展
 for (( i=0; i<DOWNLOAD_URLS_LEN; i++ )); do
-    # 提取当前扩展的下载链接和 ID
-    CURRENT_DOWNLOAD_URL=${EXTENSION_DOWNLOAD_URLS[$i]}
-    CURRENT_EXTENSION_ID=${TARGET_EXTENSION_IDS[$i]}
-    CURRENT_EXTENSION_ZIP_NAME=$(basename "$CURRENT_DOWNLOAD_URL")
-    CURRENT_EXTENSION_ZIP_PATH="$EXTENSION_SAVE_DIR/$CURRENT_EXTENSION_ZIP_NAME"
+    # 提取当前扩展的下载链接和 ID
+    CURRENT_DOWNLOAD_URL=${EXTENSION_DOWNLOAD_URLS[$i]}
+    CURRENT_EXTENSION_ID=${TARGET_EXTENSION_IDS[$i]}
+    CURRENT_EXTENSION_ZIP_NAME=$(basename "$CURRENT_DOWNLOAD_URL")
+    CURRENT_EXTENSION_ZIP_PATH="$EXTENSION_SAVE_DIR/$CURRENT_EXTENSION_ZIP_NAME"
  
-    # 打印当前处理的扩展信息
-    info_log "\n====================================="
-    info_log "正在处理第 $((i+1))/$DOWNLOAD_URLS_LEN 个扩展：$CURRENT_EXTENSION_ID"
-    info_log "====================================="
+    # 打印当前处理的扩展信息
+    info_log "\n====================================="
+    info_log "正在处理第 $((i+1))/$DOWNLOAD_URLS_LEN 个扩展：$CURRENT_EXTENSION_ID"
+    info_log "====================================="
  
-    # 子步骤1：下载当前扩展包
-    info_log "子步骤1：下载扩展包"
-    if [ "$DOWNLOAD_TOOL" = "wget" ]; then
-        wget -q -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
-            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
-            FAIL_COUNT=$((FAIL_COUNT+1))
-            continue
-        }
-    else
-        curl -s -o "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
-            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
-            FAIL_COUNT=$((FAIL_COUNT+1))
-            continue
-        }
-    fi
+    # 子步骤1：下载当前扩展包
+    info_log "子步骤1：下载扩展包"
+    if [ "$DOWNLOAD_TOOL" = "wget" ]; then
+        wget -q -O "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
+            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
+            FAIL_COUNT=$((FAIL_COUNT+1))
+            continue
+        }
+    else
+        curl -s -o "$CURRENT_EXTENSION_ZIP_PATH" "$CURRENT_DOWNLOAD_URL" || {
+            ext_error_log "第 $((i+1)) 个扩展下载失败，请检查链接是否有效：$CURRENT_DOWNLOAD_URL"
+            FAIL_COUNT=$((FAIL_COUNT+1))
+            continue
+        }
+    fi
  
-    # 验证下载文件是否存在
-    if [ ! -f "$CURRENT_EXTENSION_ZIP_PATH" ]; then
-        ext_error_log "第 $((i+1)) 个扩展下载失败，未找到文件：$CURRENT_EXTENSION_ZIP_PATH"
-        FAIL_COUNT=$((FAIL_COUNT+1))
-        continue
-    fi
-    info_log "扩展包已成功下载到：$CURRENT_EXTENSION_ZIP_PATH"
+    # 验证下载文件是否存在
+    if [ ! -f "$CURRENT_EXTENSION_ZIP_PATH" ]; then
+        ext_error_log "第 $((i+1)) 个扩展下载失败，未找到文件：$CURRENT_EXTENSION_ZIP_PATH"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+        continue
+    fi
+    info_log "扩展包已成功下载到：$CURRENT_EXTENSION_ZIP_PATH"
  
-    # 子步骤2：安装当前扩展（强制覆盖已安装版本）
-    info_log "子步骤2：安装扩展"
-    gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" &> /dev/null || {
-        ext_error_log "第 $((i+1)) 个扩展安装失败：$CURRENT_EXTENSION_ID"
-        FAIL_COUNT=$((FAIL_COUNT+1))
-        continue
-    }
-    info_log "扩展已成功安装（强制覆盖已存在版本）"
+    # 子步骤2：安装当前扩展（强制覆盖已安装版本）
+    info_log "子步骤2：安装扩展"
+    gnome-extensions install -f "$CURRENT_EXTENSION_ZIP_PATH" &> /dev/null || {
+        ext_error_log "第 $((i+1)) 个扩展安装失败：$CURRENT_EXTENSION_ID"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+        continue
+    }
+    info_log "扩展已成功安装（强制覆盖已存在版本）"
  
-    # 子步骤3：刷新缓存（关键！解决安装后list查询不到的问题）
-    info_log "子步骤3：刷新扩展配置缓存"
-    refresh_extension_cache
+    # 子步骤3：刷新缓存（关键！解决安装后list查询不到的问题）
+    info_log "子步骤3：刷新扩展配置缓存"
+    refresh_extension_cache
  
-    # 子步骤4：启用当前扩展
-    info_log "子步骤4：启用扩展"
-    # 先检查扩展是否已安装（此时缓存已刷新，可正常查询）
-    if ! gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID"; then
-        ext_error_log "第 $((i+1)) 个扩展未找到 ID：$CURRENT_EXTENSION_ID，启用失败（可能是缓存刷新失败或扩展包损坏）"
-        FAIL_COUNT=$((FAIL_COUNT+1))
-        continue
-    fi
+    # 子步骤4：启用当前扩展
+    info_log "子步骤4：启用扩展"
+    # 先检查扩展是否已安装（此时缓存已刷新，可正常查询）
+    if ! gnome-extensions list | grep -q "$CURRENT_EXTENSION_ID"; then
+        ext_error_log "第 $((i+1)) 个扩展未找到 ID：$CURRENT_EXTENSION_ID，启用失败（可能是缓存刷新失败或扩展包损坏）"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+        continue
+    fi
  
-    # 启用扩展
-    gnome-extensions enable "$CURRENT_EXTENSION_ID" &> /dev/null || {
-        ext_error_log "第 $((i+1)) 个扩展启用失败，可能是版本不兼容：$CURRENT_EXTENSION_ID"
-        FAIL_COUNT=$((FAIL_COUNT+1))
-        continue
-    }
-    info_log "扩展已成功启用：$CURRENT_EXTENSION_ID"
+    # 启用扩展
+    gnome-extensions enable "$CURRENT_EXTENSION_ID" &> /dev/null || {
+        ext_error_log "第 $((i+1)) 个扩展启用失败，可能是版本不兼容：$CURRENT_EXTENSION_ID"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+        continue
+    }
+    info_log "扩展已成功启用：$CURRENT_EXTENSION_ID"
  
-    # 子步骤5：验证当前扩展结果
-    info_log "子步骤5：验证安装结果"
-    if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID"; then
-        info_log "第 $((i+1)) 个扩展：安装并启用成功"
-        SUCCESS_COUNT=$((SUCCESS_COUNT+1))
-    else
-        warn_log "第 $((i+1)) 个扩展：已安装，但未成功启用，请手动检查"
-        FAIL_COUNT=$((FAIL_COUNT+1))
-    fi
+    # 子步骤5：验证当前扩展结果
+    info_log "子步骤5：验证安装结果"
+    if gnome-extensions list --enabled | grep -q "$CURRENT_EXTENSION_ID"; then
+        info_log "第 $((i+1)) 个扩展：安装并启用成功"
+        SUCCESS_COUNT=$((SUCCESS_COUNT+1))
+    else
+        warn_log "第 $((i+1)) 个扩展：已安装，但未成功启用，请手动检查"
+        FAIL_COUNT=$((FAIL_COUNT+1))
+    fi
 done
  
 
@@ -450,9 +449,9 @@ done
 info_log "\n===== 步骤5：批量处理完成总结 ====="
 info_log "${GREEN}成功处理：$SUCCESS_COUNT 个扩展${NC}"
 if [ "$FAIL_COUNT" -gt 0 ]; then
-    warn_log "${RED}失败处理：$FAIL_COUNT 个扩展${NC}，请查看上方错误日志排查问题"
+    warn_log "${RED}失败处理：$FAIL_COUNT 个扩展${NC}，请查看上方错误日志排查问题"
 else
-    info_log "${GREEN}所有扩展均处理成功！${NC}"
+    info_log "${GREEN}所有扩展均处理成功！${NC}"
 fi
  
 
@@ -467,7 +466,7 @@ info_log "4. 查看所有已启用扩展：gnome-extensions list --enabled"
 # 安装consolas字体
 sudo apt update && sudo apt install -y fontconfig
 sudo mkdir -p /usr/share/fonts/ttf-custom
-sudo wget -O /usr/share/fonts/ttf-custom/consolas.ttf https://raw.githubusercontent.com/ranyev5/Doc/main/Consolas.ttf
+sudo cp $HOME/Downloads/Doc/Consolas.ttf /usr/share/fonts/ttf-custom/
 sudo chmod 644 /usr/share/fonts/ttf-custom/*.ttf
 sudo chown root:root /usr/share/fonts/ttf-custom/*.ttf
 fc-cache -fv
@@ -494,31 +493,31 @@ mkdir -p ~/.config/terminator
 # 写入 Terminator 配置（包含所有要求：字体、配色、透明度）
 cat > ~/.config/terminator/config << EOF
 [global_config]
-  title_transmit_bg_color = "#d30102"
+  title_transmit_bg_color = "#d30102"
 [keybindings]
 [profiles]
-  [[default]]
-    # 配置字体：Noto Mono Bold（粗体），字体大小 12（可修改为 14/16）
-    font = Noto Mono Bold 14
-    # 配置配色方案：Solarized dark（Terminator 原生支持）
-    color_scheme = Solarized dark
-    # 配置背景半透明度 80%：启用透明 + 不透明度 0.8（对应半透明 80%）
-    background_transparent = True
-    background_darkness = 0.8
-    # 补充 Solarized dark 配套颜色（确保低版本 Terminator 兼容）
-    foreground_color = "#839496"
-    background_color = "#002b36"
-    cursor_color = "#839496"
-    # 关闭闪烁光标（可选，优化体验）
-    cursor_blink = False
+  [[default]]
+    # 配置字体：Noto Mono Bold（粗体），字体大小 12（可修改为 14/16）
+    font = Noto Mono Bold 14
+    # 配置配色方案：Solarized dark（Terminator 原生支持）
+    color_scheme = Solarized dark
+    # 配置背景半透明度 80%：启用透明 + 不透明度 0.8（对应半透明 80%）
+    background_transparent = True
+    background_darkness = 0.8
+    # 补充 Solarized dark 配套颜色（确保低版本 Terminator 兼容）
+    foreground_color = "#839496"
+    background_color = "#002b36"
+    cursor_color = "#839496"
+    # 关闭闪烁光标（可选，优化体验）
+    cursor_blink = False
 [layouts]
-  [[default]]
-    [[[child1]]]
-      type = Terminal
-      parent = window0
-    [[[window0]]]
-      type = Window
-      parent = ""
+  [[default]]
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+    [[[window0]]]
+      type = Window
+      parent = ""
 [plugins]
 EOF
 ```
@@ -530,56 +529,56 @@ EOF
   
 # 检查是否安装了必要的依赖工具
 check_dependencies() {
-    local dependencies=("git" "sassc" "gtk2-engines-murrine" "gnome-themes-extra")
-    local missing=()
+    local dependencies=("git" "sassc" "gtk2-engines-murrine" "gnome-themes-extra")
+    local missing=()
   
-    for dep in "${dependencies[@]}"; do
-        if ! dpkg -s "$dep" &> /dev/null; then
-            missing+=("$dep")
-        fi
-    done
+    for dep in "${dependencies[@]}"; do
+        if ! dpkg -s "$dep" &> /dev/null; then
+            missing+=("$dep")
+        fi
+    done
   
-    if [ ${#missing[@]} -gt 0 ]; then
-        echo "安装必要的依赖..."
-        sudo apt update
-        sudo apt install -y "${missing[@]}"
-    fi
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "安装必要的依赖..."
+        sudo apt update
+        sudo apt install -y "${missing[@]}"
+    fi
 }
   
 # 安装 Orchis 主题
 install_orchis() {
-    echo "开始安装 Orchis 主题..."
-    local temp_dir=$(mktemp -d)
-    git clone https://github.com/vinceliuice/Orchis-theme.git "$temp_dir/orchis"
-    cd "$temp_dir/orchis" || { echo "无法进入 Orchis 目录"; exit 1; }
-    chmod +x install.sh
-    # 安装默认主题变体（可根据需要修改参数）
-    ./install.sh -t all -c all -s all --tweaks macos
-    cd - || exit
-    rm -rf "$temp_dir/orchis"
-    echo "Orchis 主题安装完成"
+    echo "开始安装 Orchis 主题..."
+    local temp_dir=$(mktemp -d)
+    git clone https://github.com/vinceliuice/Orchis-theme.git "$temp_dir/orchis"
+    cd "$temp_dir/orchis" || { echo "无法进入 Orchis 目录"; exit 1; }
+    chmod +x install.sh
+    # 安装默认主题变体（可根据需要修改参数）
+    ./install.sh
+    cd - || exit
+    rm -rf "$temp_dir/orchis"
+    echo "Orchis 主题安装完成"
 }
   
 # 安装 Tela 图标主题
 install_tela() {
-    echo "开始安装 Tela 图标主题..."
-    local temp_dir=$(mktemp -d)
-    git clone https://github.com/vinceliuice/Tela-icon-theme.git "$temp_dir/tela"
-    cd "$temp_dir/tela" || { echo "无法进入 Tela 目录"; exit 1; }
-    chmod +x install.sh
-    # 安装所有颜色变体
-    ./install.sh -a
-    cd - || exit
-    rm -rf "$temp_dir/tela"
-    echo "Tela 图标主题安装完成"
+    echo "开始安装 Tela 图标主题..."
+    local temp_dir=$(mktemp -d)
+    git clone https://github.com/vinceliuice/Tela-icon-theme.git "$temp_dir/tela"
+    cd "$temp_dir/tela" || { echo "无法进入 Tela 目录"; exit 1; }
+    chmod +x install.sh
+    # 安装所有颜色变体
+    ./install.sh -a
+    cd - || exit
+    rm -rf "$temp_dir/tela"
+    echo "Tela 图标主题安装完成"
 }
   
 # 主流程
 main() {
-    check_dependencies
-    install_orchis
-    install_tela
-    echo "所有主题安装完成！请通过 GNOME Tweaks 等工具应用主题"
+    check_dependencies
+    install_orchis
+    install_tela
+    echo "所有主题安装完成！请通过 GNOME Tweaks 等工具应用主题"
 }
   
 main
